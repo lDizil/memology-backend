@@ -71,7 +71,7 @@ definitions:
         example: password123
         type: string
       username:
-        example: johndoe
+        example: johndoe или john@example.com
         type: string
     required:
     - password
@@ -118,7 +118,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Login with username and password
+      description: Login with username or email and password
       parameters:
       - description: Login credentials
         in: body
@@ -255,7 +255,39 @@ paths:
       summary: Register new user
       tags:
       - auth
-  /users:
+  /users/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change user password
+      parameters:
+      - description: Password change data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/services.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - users
+  /users/list:
     get:
       description: Get paginated users list
       parameters:
@@ -291,38 +323,6 @@ paths:
       summary: Get users list
       tags:
       - users
-  /users/change-password:
-    post:
-      consumes:
-      - application/json
-      description: Change user password
-      parameters:
-      - description: Password change data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/services.ChangePasswordRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.MessageResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Change password
-      tags:
-      - users
   /users/profile:
     get:
       description: Get current user profile
@@ -346,6 +346,7 @@ paths:
       summary: Get user profile
       tags:
       - users
+  /users/profile/update:
     put:
       consumes:
       - application/json

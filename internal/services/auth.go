@@ -75,10 +75,21 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 }
 
 func (s *authService) Login(ctx context.Context, req LoginRequest) (*AuthResponse, error) {
-	user, err := s.userRepo.GetByUsername(ctx, req.Username)
+	var user *models.User
+	var err error
+
+	user, err = s.userRepo.GetByUsername(ctx, req.Username)
 	if err != nil {
 		return nil, err
 	}
+
+	if user == nil {
+		user, err = s.userRepo.GetByEmail(ctx, req.Username)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if user == nil {
 		return nil, ErrInvalidCredentials
 	}

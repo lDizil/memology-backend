@@ -33,9 +33,9 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 		users.Use(middleware.JWTAuth(authService))
 		{
 			users.GET("/profile", userHandler.GetProfile)
-			users.PUT("/profile", userHandler.UpdateProfile)
+			users.PUT("/profile/update", userHandler.UpdateProfile)
 			users.POST("/change-password", userHandler.ChangePassword)
-			users.GET("", userHandler.GetUsers)
+			users.GET("/list", userHandler.GetUsers)
 		}
 	}
 

@@ -33,7 +33,7 @@ type RegisterRequest struct {
 }
 
 type LoginRequest struct {
-	Username string `json:"username" validate:"required" example:"johndoe"`
+	Username string `json:"username" validate:"required" example:"johndoe или john@example.com"`
 	Password string `json:"password" validate:"required" example:"password123"`
 }
 

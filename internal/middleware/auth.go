@@ -18,14 +18,14 @@ func JWTAuth(authService services.AuthService) gin.HandlerFunc {
 			return
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
-			c.Abort()
-			return
+		// Проверяем Bearer формат, но также принимаем токен напрямую
+		var token string
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+		} else {
+			// Принимаем токен напрямую без Bearer
+			token = authHeader
 		}
-
-		token := parts[1]
 		claims, err := authService.ValidateToken(c.Request.Context(), token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})

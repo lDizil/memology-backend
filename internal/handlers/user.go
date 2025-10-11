@@ -59,7 +59,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 }
 
 // @Summary User login
-// @Description Login with username and password
+// @Description Login with username or email and password
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -228,7 +228,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 409 {object} ErrorResponse
-// @Router /users/profile [put]
+// @Router /users/profile/update [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -312,7 +312,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 // @Success 200 {array} models.User
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
-// @Router /users [get]
+// @Router /users/list [get]
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
