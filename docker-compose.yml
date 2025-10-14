@@ -20,7 +20,7 @@ services:
     build: .
     container_name: memology_app
     ports:
-      - "${SERVER_PORT}:8080"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     environment:
       SERVER_HOST: ${SERVER_HOST}
       SERVER_PORT: ${SERVER_PORT}
