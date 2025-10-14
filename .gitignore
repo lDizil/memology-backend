@@ -59,5 +59,4 @@ pids
 ehthumbs.db
 Thumbs.db
 
-# GitHub - игнорируем только инструкции Copilot
 .github/copilot-instructions.md

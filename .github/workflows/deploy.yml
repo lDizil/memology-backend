@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/memology-backend
+            cd ~/projects/memology-backend
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
@@ -37,7 +37,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/memology-backend
+            cd ~/projects/memology-backend
             git status
             docker ps
             echo '--- Health Check ---'

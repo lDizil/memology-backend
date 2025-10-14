@@ -57,13 +57,18 @@ Swagger UI доступен по адресу: `http://localhost:8080/swagger/in
 
 ### Для фронтенда (OpenAPI спецификация)
 
-OpenAPI JSON спецификация: `http://localhost:8080/swagger/doc.json`
+Swagger 2.0 спецификация: `http://localhost:8080/swagger/doc.json`
 
-Используйте этот endpoint для генерации клиентского SDK или типов TypeScript:
+**Для генерации TypeScript типов** (требуется конвертация в OpenAPI 3.0):
 
 ```bash
-# Пример для TypeScript
-npx openapi-typescript http://localhost:8080/swagger/doc.json --output ./types/api.ts
+# Автоматическая конвертация через скрипт
+node scripts/convert-to-openapi3.js
+
+# Или вручную:
+curl http://localhost:8080/swagger/doc.json -o swagger.json
+npx swagger2openapi swagger.json -o openapi.json
+npx openapi-typescript openapi.json --output ./types/api.ts
 ```
 
 Документация автоматически генерируется из аннотаций в коде и содержит все доступные endpoints с примерами запросов.
@@ -120,6 +125,7 @@ make clean       # Очистить всё
 Подробная инструкция по настройке: [.github/DEPLOY.md](.github/DEPLOY.md)
 
 **Кратко:**
+
 1. Добавьте GitHub Secrets: `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY`
 2. Подготовьте сервер (Docker, Git)
 3. Push в `main` → автоматический деплой ✅
