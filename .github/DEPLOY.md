@@ -8,17 +8,13 @@
 
 IP адрес или домен вашего сервера
 
-```
 Пример: 123.45.67.89 или server.example.com
-```
 
 ### SERVER_USER
 
 Имя пользователя для SSH подключения
 
-```
-Пример: root или ubuntu
-```
+Пример: root или projects
 
 ### SSH_PRIVATE_KEY
 
@@ -26,25 +22,19 @@ IP адрес или домен вашего сервера
 
 Чтобы создать новый ключ:
 
-```bash
 ssh-keygen -t ed25519 -C "github-actions"
-```
 
-Скопируйте **приватный** ключ (`~/.ssh/id_ed25519`):
+Скопируйте приватный ключ (~/.ssh/id_ed25519):
 
-```bash
 cat ~/.ssh/id_ed25519
-```
 
-И добавьте **публичный** ключ на сервер (`~/.ssh/id_ed25519.pub`):
+И добавьте публичный ключ на сервер (~/.ssh/id_ed25519.pub):
 
-```bash
 ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
-```
 
 ## Подготовка сервера
 
-На сервере должен быть установлен:
+На сервере должно быть установлено:
 
 - Docker
 - Docker Compose
@@ -52,38 +42,40 @@ ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
 
 ### Первичная настройка
 
-1. Клонируйте репозиторий на сервер:
+1. Создайте .env файл на сервере:
 
-```bash
-mkdir -p ~/projects
-cd ~/projects
-git clone https://github.com/lDizil/memology-backend.git
-cd memology-backend
-```
-
-2. Создайте `.env` файл на сервере:
-
-```bash
-cp .env.example .env
+ssh твой-сервер
+cd $HOME/memology-backend
 nano .env
-```
 
-3. Запустите вручную первый раз:
+Добавьте следующие переменные:
 
-```bash
-docker compose up -d
-```
+SERVER_PORT=8080
+SERVER_HOST=0.0.0.0
 
-После этого каждый push в `main` ветку будет автоматически деплоить изменения на сервер!
+DB*HOST=postgres
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=ваш*сильный_пароль
+DB_NAME=memology
+DB_SSLMODE=disable
+
+JWT*SECRET=ваш_jwt*секрет*минимум_32*символа
+JWT_ACCESS_TTL=1h
+JWT_REFRESH_TTL=168h
+
+Важно: Замените ваш*сильный*пароль и ваш*jwt*секрет на реальные значения!
+
+2. Деплой запускается автоматически при push в main - репозиторий клонируется автоматически, если его нет.
 
 ## Как работает деплой
 
-1. При push в `main` запускается GitHub Action
+1. При push в main запускается GitHub Action
 2. Подключается к серверу по SSH
-3. Обновляет код из git репозитория
-4. Пересобирает Docker контейнеры
-5. Перезапускает приложение
-6. Проверяет что всё работает
+3. Клонирует репозиторий (если его нет) или обновляет код
+4. Собирает Docker образ из Dockerfile
+5. Перезапускает контейнеры
+6. Показывает последние 30 строк логов
 
 ## Проверка логов
 
@@ -91,7 +83,19 @@ docker compose up -d
 
 На сервере логи можно посмотреть:
 
-```bash
-docker logs memology_app
-docker logs memology_postgres
-```
+cd $HOME/memology-backend
+docker logs memology_app --tail 50
+docker logs memology_postgres --tail 50
+docker compose logs -f
+
+Последняя команда показывает все логи в реальном времени.
+
+## Ручной перезапуск на сервере
+
+Если нужно перезапустить вручную:
+
+cd $HOME/memology-backend
+docker compose down
+docker compose build
+docker compose up -d
+docker logs memology_app --tail 30

@@ -3,15 +3,15 @@ services:
     image: postgres:15-alpine
     container_name: memology_postgres
     environment:
-      POSTGRES_DB: memology
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,17 +20,19 @@ services:
     build: .
     container_name: memology_app
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT}:8080"
     environment:
+      SERVER_HOST: ${SERVER_HOST}
+      SERVER_PORT: ${SERVER_PORT}
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: password
-      DB_NAME: memology
-      DB_SSLMODE: disable
-      JWT_SECRET: memology-super-secret-jwt-key-2024
-      JWT_ACCESS_TTL: 1h
-      JWT_REFRESH_TTL: 168h
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SSLMODE: ${DB_SSLMODE}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL}
     depends_on:
       postgres:
         condition: service_healthy

@@ -57,18 +57,15 @@ Swagger UI доступен по адресу: `http://localhost:8080/swagger/in
 
 ### Для фронтенда (OpenAPI спецификация)
 
-Swagger 2.0 спецификация: `http://localhost:8080/swagger/doc.json`
+Был реализован свой конвертатор из 2 версии в 3.0.3
 
-**Для генерации TypeScript типов** (требуется конвертация в OpenAPI 3.0):
+OpenAPI JSON спецификация: `http://localhost:8080/openapi.json`
+
+Используйте этот endpoint для генерации клиентского SDK или типов TypeScript:
 
 ```bash
-# Автоматическая конвертация через скрипт
-node scripts/convert-to-openapi3.js
-
-# Или вручную:
-curl http://localhost:8080/swagger/doc.json -o swagger.json
-npx swagger2openapi swagger.json -o openapi.json
-npx openapi-typescript openapi.json --output ./types/api.ts
+# Пример для TypeScript
+npx openapi-typescript http://localhost:8080/openapi.json --output ./types/api.ts
 ```
 
 Документация автоматически генерируется из аннотаций в коде и содержит все доступные endpoints с примерами запросов.
