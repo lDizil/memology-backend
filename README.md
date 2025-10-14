@@ -51,7 +51,20 @@ docker-compose up --build
 
 ## Документация
 
-Swagger UI доступен по адресу: `http://localhost:8080/docs/`
+### Для разработчиков (интерактивная)
+
+Swagger UI доступен по адресу: `http://localhost:8080/swagger/index.html`
+
+### Для фронтенда (OpenAPI спецификация)
+
+OpenAPI JSON спецификация: `http://localhost:8080/swagger/doc.json`
+
+Используйте этот endpoint для генерации клиентского SDK или типов TypeScript:
+
+```bash
+# Пример для TypeScript
+npx openapi-typescript http://localhost:8080/swagger/doc.json --output ./types/api.ts
+```
 
 Документация автоматически генерируется из аннотаций в коде и содержит все доступные endpoints с примерами запросов.
 
