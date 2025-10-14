@@ -136,7 +136,13 @@ deploy_app() {
         echo "Building and starting containers..."
         docker-compose pull postgres || true
         docker-compose build --no-cache app
-        docker-compose up -d
+        
+        # Start services (use production override if available)
+        if [ -f docker-compose.prod.yml ]; then
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+        else
+            docker-compose up -d
+        fi
         
         # Wait for services
         echo "Waiting for services to start..."
