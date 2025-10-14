@@ -112,3 +112,26 @@ make dev-db      # Запустить только PostgreSQL
 make swagger     # Обновить документацию
 make clean       # Очистить всё
 ```
+
+## CI/CD
+
+Проект использует GitHub Actions для автоматической сборки, тестирования и деплоя на Ubuntu сервер.
+
+### Автоматический деплой
+
+При пуше в ветку `main` автоматически запускается деплой на production сервер.
+
+### Ручной деплой
+
+```bash
+# Первоначальная настройка сервера
+DEPLOY_HOST=your-server.com ./scripts/deploy.sh setup
+
+# Деплой приложения
+DEPLOY_HOST=your-server.com ./scripts/deploy.sh deploy
+
+# Просмотр логов
+DEPLOY_HOST=your-server.com ./scripts/deploy.sh logs
+```
+
+Подробная документация по настройке и использованию CI/CD: [docs/CICD.md](docs/CICD.md)

@@ -1,0 +1,89 @@
+name: CD - Deploy to Ubuntu Server
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: http://${{ secrets.SERVER_HOST }}:8080
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment directory
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p ~/memology-backend"
+
+      - name: Copy files to server
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='bin/' \
+            --exclude='*.log' \
+            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/memology-backend/
+
+      - name: Deploy application
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            cd ~/memology-backend
+            
+            # Create .env file if it doesn't exist
+            if [ ! -f .env ]; then
+              cp .env.example .env
+              echo "⚠️  Created .env from .env.example - please update with production values"
+            fi
+            
+            # Stop existing containers
+            docker-compose down || true
+            
+            # Pull latest images and rebuild
+            docker-compose pull
+            docker-compose build --no-cache
+            
+            # Start services
+            docker-compose up -d
+            
+            # Wait for services to be healthy
+            echo "Waiting for services to start..."
+            sleep 10
+            
+            # Check service status
+            docker-compose ps
+            
+            # Show logs
+            docker-compose logs --tail=50
+          ENDSSH
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -f http://${{ secrets.SERVER_HOST }}:8080/api/v1/auth/login || exit 1
+          echo "✅ Application is running successfully"
+
+      - name: Cleanup old images
+        if: success()
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            docker image prune -af --filter "until=24h"
+          ENDSSH
