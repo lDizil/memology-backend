@@ -112,3 +112,14 @@ make dev-db      # Запустить только PostgreSQL
 make swagger     # Обновить документацию
 make clean       # Очистить всё
 ```
+
+## Деплой на сервер
+
+Настроен автоматический деплой при push в `main` ветку через GitHub Actions.
+
+Подробная инструкция по настройке: [.github/DEPLOY.md](.github/DEPLOY.md)
+
+**Кратко:**
+1. Добавьте GitHub Secrets: `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY`
+2. Подготовьте сервер (Docker, Git)
+3. Push в `main` → автоматический деплой ✅

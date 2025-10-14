@@ -10,7 +10,7 @@ RUN go build -o bin/server ./cmd/server
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates
+RUN apk update && apk --no-cache add ca-certificates
 WORKDIR /root/
 
 COPY --from=builder /app/bin/server .
