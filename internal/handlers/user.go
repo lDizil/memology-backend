@@ -55,6 +55,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	setAuthCookies(c, response.AccessToken, response.RefreshToken, response.ExpiresIn)
+
 	c.JSON(http.StatusCreated, response)
 }
 
@@ -90,6 +92,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	setAuthCookies(c, response.AccessToken, response.RefreshToken, response.ExpiresIn)
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -115,6 +119,8 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
 		return
 	}
+
+	setAuthCookies(c, response.AccessToken, response.RefreshToken, response.ExpiresIn)
 
 	c.JSON(http.StatusOK, response)
 }
@@ -149,6 +155,8 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
+	clearAuthCookies(c)
+
 	c.JSON(http.StatusOK, MessageResponse{Message: "logged out successfully"})
 }
 
@@ -172,6 +180,9 @@ func (h *AuthHandler) LogoutAll(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
+
+	// Clear cookies
+	clearAuthCookies(c)
 
 	c.JSON(http.StatusOK, MessageResponse{Message: "logged out from all devices"})
 }
@@ -336,4 +347,35 @@ type ErrorResponse struct {
 
 type MessageResponse struct {
 	Message string `json:"message"`
+}
+
+// setAuthCookies sets access and refresh tokens in HTTP-only cookies
+func setAuthCookies(c *gin.Context, accessToken, refreshToken string, expiresIn int64) {
+	// Access token cookie (short-lived)
+	c.SetCookie(
+		"access_token", // name
+		accessToken,    // value
+		int(expiresIn), // maxAge in seconds
+		"/",            // path
+		"",             // domain (empty = current domain)
+		false,          // secure (set true in production with HTTPS)
+		true,           // httpOnly (prevents JS access)
+	)
+
+	// Refresh token cookie (long-lived, 7 days = 604800 seconds)
+	c.SetCookie(
+		"refresh_token",
+		refreshToken,
+		604800, // 7 days
+		"/",
+		"",
+		false, // secure
+		true,  // httpOnly
+	)
+}
+
+// clearAuthCookies removes auth cookies by setting them to expired
+func clearAuthCookies(c *gin.Context) {
+	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 }
