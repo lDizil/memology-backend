@@ -11,21 +11,24 @@ import (
 
 func JWTAuth(authService services.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header required"})
-			c.Abort()
-			return
+		var token string
+
+		token, err := c.Cookie("access_token")
+		if err != nil || token == "" {
+			authHeader := c.GetHeader("Authorization")
+			if authHeader == "" {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization required"})
+				c.Abort()
+				return
+			}
+
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				token = strings.TrimPrefix(authHeader, "Bearer ")
+			} else {
+				token = authHeader
+			}
 		}
 
-		// Проверяем Bearer формат, но также принимаем токен напрямую
-		var token string
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			token = strings.TrimPrefix(authHeader, "Bearer ")
-		} else {
-			// Принимаем токен напрямую без Bearer
-			token = authHeader
-		}
 		claims, err := authService.ValidateToken(c.Request.Context(), token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})

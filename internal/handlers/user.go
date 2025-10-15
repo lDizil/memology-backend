@@ -98,23 +98,21 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // @Summary Refresh access token
-// @Description Get new access token using refresh token
+// @Description Get new access token using refresh token from cookies
 // @Tags auth
-// @Accept json
 // @Produce json
-// @Param request body RefreshTokenRequest true "Refresh token"
 // @Success 200 {object} services.AuthResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	var req RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil || refreshToken == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "refresh token required in cookies"})
 		return
 	}
 
-	response, err := h.authService.RefreshToken(c.Request.Context(), req.RefreshToken)
+	response, err := h.authService.RefreshToken(c.Request.Context(), refreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
 		return
@@ -126,12 +124,9 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 }
 
 // @Summary Logout user
-// @Description Logout user and invalidate refresh token
+// @Description Logout user and invalidate refresh token from cookies
 // @Tags auth
-// @Accept json
 // @Produce json
-// @Security BearerAuth
-// @Param request body RefreshTokenRequest true "Refresh token"
 // @Success 200 {object} MessageResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -143,13 +138,13 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	var req RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil || refreshToken == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "refresh token required in cookies"})
 		return
 	}
 
-	err := h.authService.Logout(c.Request.Context(), userID.(uuid.UUID), req.RefreshToken)
+	err = h.authService.Logout(c.Request.Context(), userID.(uuid.UUID), refreshToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
@@ -181,7 +176,6 @@ func (h *AuthHandler) LogoutAll(c *gin.Context) {
 		return
 	}
 
-	// Clear cookies
 	clearAuthCookies(c)
 
 	c.JSON(http.StatusOK, MessageResponse{Message: "logged out from all devices"})
@@ -349,32 +343,28 @@ type MessageResponse struct {
 	Message string `json:"message"`
 }
 
-// setAuthCookies sets access and refresh tokens in HTTP-only cookies
 func setAuthCookies(c *gin.Context, accessToken, refreshToken string, expiresIn int64) {
-	// Access token cookie (short-lived)
 	c.SetCookie(
-		"access_token", // name
-		accessToken,    // value
-		int(expiresIn), // maxAge in seconds
-		"/",            // path
-		"",             // domain (empty = current domain)
-		false,          // secure (set true in production with HTTPS)
-		true,           // httpOnly (prevents JS access)
+		"access_token",
+		accessToken,
+		int(expiresIn),
+		"/",
+		"",
+		false,
+		true,
 	)
 
-	// Refresh token cookie (long-lived, 7 days = 604800 seconds)
 	c.SetCookie(
 		"refresh_token",
 		refreshToken,
-		604800, // 7 days
+		604800,
 		"/",
 		"",
-		false, // secure
-		true,  // httpOnly
+		false,
+		true,
 	)
 }
 
-// clearAuthCookies removes auth cookies by setting them to expired
 func clearAuthCookies(c *gin.Context) {
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
