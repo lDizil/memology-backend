@@ -49,6 +49,14 @@ docker-compose up --build
 - `POST /api/v1/users/change-password` - Сменить пароль
 - `GET /api/v1/users/list` - Список пользователей
 
+### Мемы
+
+- `GET /api/v1/memes` - Получить все мемы (публичный)
+- `GET /api/v1/memes/:id` - Получить мем по ID (публичный)
+- `POST /api/v1/memes/generate` - Сгенерировать мем (требует авторизации)
+- `GET /api/v1/memes/my` - Получить свои мемы (требует авторизации)
+- `DELETE /api/v1/memes/:id` - Удалить свой мем (требует авторизации)
+
 ## Документация
 
 ### Для разработчиков (интерактивная)
@@ -94,15 +102,59 @@ DB_SSLMODE=disable
 JWT_SECRET=your-very-secret-jwt-key-change-this-in-production
 JWT_ACCESS_TTL=1h
 JWT_REFRESH_TTL=168h
+
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin
+MINIO_ENDPOINT=minio:9000
+MINIO_PUBLIC_URL=http://localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_USE_SSL=false
+MINIO_BUCKET=memes
 ```
 
 ## Особенности
 
 - **Авторизация**: Можно входить как по username, так и по email
-- **JWT**: Access (1 час) + Refresh (7 дней) токены
+- **JWT**: Access (1 час) + Refresh (7 дней) токены в HTTP-only cookies
 - **Пароли**: Хешируются через Argon2
 - **UUID**: Используются для всех ID
 - **GORM**: Auto-миграции БД при старте
+- **MinIO**: S3-совместимое хранилище для изображений мемов
+- **Clean Architecture**: Разделение на слои handlers → services → repository
+
+## Генерация мемов
+
+### Текущая реализация (для отладки)
+
+```bash
+POST /api/v1/memes/generate
+Content-Type: multipart/form-data
+
+prompt: "ваш текст промпта"
+image: файл изображения (опционально)
+```
+
+- **С файлом**: мем создаётся сразу со статусом `completed`
+- **Без файла**: мем создаётся со статусом `pending` (для будущей нейронки)
+
+### Будущая интеграция с нейронкой
+
+Архитектура готова к интеграции:
+
+1. Мем создаётся со статусом `pending`
+2. Worker берёт задачу из очереди
+3. Отправляет `prompt` в нейросеть
+4. Получает изображение и загружает в MinIO
+5. Обновляет статус на `completed`
+
+### MinIO Console
+
+Для просмотра загруженных файлов:
+
+- URL: `http://localhost:9001`
+- Login: `minioadmin`
+- Password: `minioadmin`
 
 ## Команды разработки
 
