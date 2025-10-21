@@ -12,6 +12,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	JWT      JWTConfig
+	MinIO    MinIOConfig
 }
 
 type ServerConfig struct {
@@ -32,6 +33,15 @@ type JWTConfig struct {
 	SecretKey       string
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
+}
+
+type MinIOConfig struct {
+	Endpoint  string
+	PublicURL string // URL для фронтенда (localhost:9000)
+	AccessKey string
+	SecretKey string
+	UseSSL    bool
+	Bucket    string
 }
 
 func Load() *Config {
@@ -55,6 +65,14 @@ func Load() *Config {
 			AccessTokenTTL:  getEnvDuration("JWT_ACCESS_TTL", time.Hour),
 			RefreshTokenTTL: getEnvDuration("JWT_REFRESH_TTL", time.Hour*24*7),
 		},
+		MinIO: MinIOConfig{
+			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			PublicURL: getEnv("MINIO_PUBLIC_URL", "http://localhost:9000"),
+			AccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+			SecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin123"),
+			UseSSL:    getEnvBool("MINIO_USE_SSL", false),
+			Bucket:    getEnv("MINIO_BUCKET", "memes"),
+		},
 	}
 }
 
@@ -72,6 +90,15 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 		}
 		if seconds, err := strconv.Atoi(value); err == nil {
 			return time.Duration(seconds) * time.Second
+		}
+	}
+	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if parsed, err := strconv.ParseBool(value); err == nil {
+			return parsed
 		}
 	}
 	return defaultValue

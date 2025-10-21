@@ -10,12 +10,45 @@ definitions:
       message:
         type: string
     type: object
-  handlers.RefreshTokenRequest:
+  models.Meme:
     properties:
-      refresh_token:
+      created_at:
         type: string
-    required:
-    - refresh_token
+      generation_time_ms:
+        type: integer
+      id:
+        type: string
+      image_url:
+        type: string
+      metrics:
+        $ref: '#/definitions/models.MemeMetrics'
+      prompt:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.MemeMetrics:
+    properties:
+      click_count:
+        type: integer
+      created_at:
+        type: string
+      download_count:
+        type: integer
+      id:
+        type: string
+      meme_id:
+        type: string
+      other_interactions:
+        type: integer
+      rating_score:
+        type: integer
+      updated_at:
+        type: string
     type: object
   models.User:
     properties:
@@ -146,16 +179,7 @@ paths:
       - auth
   /auth/logout:
     post:
-      consumes:
-      - application/json
-      description: Logout user and invalidate refresh token
-      parameters:
-      - description: Refresh token
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.RefreshTokenRequest'
+      description: Logout user and invalidate refresh token from cookies
       produces:
       - application/json
       responses:
@@ -171,8 +195,6 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
       summary: Logout user
       tags:
       - auth
@@ -197,16 +219,7 @@ paths:
       - auth
   /auth/refresh:
     post:
-      consumes:
-      - application/json
-      description: Get new access token using refresh token
-      parameters:
-      - description: Refresh token
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.RefreshTokenRequest'
+      description: Get new access token using refresh token from cookies
       produces:
       - application/json
       responses:
@@ -255,6 +268,145 @@ paths:
       summary: Register new user
       tags:
       - auth
+  /memes:
+    get:
+      description: Get paginated list of all memes
+      parameters:
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Meme'
+            type: array
+      summary: Get all memes
+      tags:
+      - memes
+  /memes/{id}:
+    delete:
+      description: Delete meme by ID (only owner can delete)
+      parameters:
+      - description: Meme ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Delete meme
+      tags:
+      - memes
+    get:
+      description: Get meme details by ID
+      parameters:
+      - description: Meme ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Meme'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get meme by ID
+      tags:
+      - memes
+  /memes/generate:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Generate meme from prompt. Image is optional (for debugging). Without
+        image, meme will be in 'pending' status waiting for neural network processing.
+      parameters:
+      - description: Meme generation prompt
+        in: formData
+        name: prompt
+        required: true
+        type: string
+      - description: Meme image file (optional, for debugging)
+        in: formData
+        name: image
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Meme'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Generate new meme
+      tags:
+      - memes
+  /memes/my:
+    get:
+      description: Get list of memes created by current user
+      parameters:
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Meme'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get user memes
+      tags:
+      - memes
   /users/change-password:
     post:
       consumes:

@@ -33,11 +33,18 @@ func main() {
 
 	userRepo := repository.NewUserRepository(db)
 	sessionRepo := repository.NewSessionRepository(db)
+	memeRepo := repository.NewMemeRepository(db)
+
+	minioService, err := services.NewMinIOService(&cfg.MinIO)
+	if err != nil {
+		log.Fatal("Failed to initialize MinIO:", err)
+	}
 
 	authService := services.NewAuthService(userRepo, sessionRepo, jwtManager)
 	userService := services.NewUserService(userRepo)
+	memeService := services.NewMemeService(memeRepo, minioService)
 
-	r := router.SetupRouter(authService, userService)
+	r := router.SetupRouter(authService, userService, memeService)
 
 	log.Printf("Server starting on %s:%s", cfg.Server.Host, cfg.Server.Port)
 	if err := r.Run(":" + cfg.Server.Port); err != nil {

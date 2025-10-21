@@ -1,0 +1,184 @@
+package handlers
+
+import (
+	"net/http"
+	"strconv"
+
+	"memology-backend/internal/services"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
+)
+
+type MemeHandler struct {
+	memeService services.MemeService
+	validator   *validator.Validate
+}
+
+func NewMemeHandler(memeService services.MemeService) *MemeHandler {
+	return &MemeHandler{
+		memeService: memeService,
+		validator:   validator.New(),
+	}
+}
+
+// @Summary Generate new meme
+// @Description Generate meme from prompt. Image is optional (for debugging). Without image, meme will be in 'pending' status waiting for neural network processing.
+// @Tags memes
+// @Accept multipart/form-data
+// @Produce json
+// @Param prompt formData string true "Meme generation prompt"
+// @Param image formData file false "Meme image file (optional, for debugging)"
+// @Success 201 {object} models.Meme
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /memes/generate [post]
+func (h *MemeHandler) GenerateMeme(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		return
+	}
+
+	prompt := c.PostForm("prompt")
+	if prompt == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "prompt is required"})
+		return
+	}
+
+	req := services.CreateMemeRequest{
+		Prompt: prompt,
+	}
+
+	meme, err := h.memeService.CreateMeme(c.Request.Context(), userID.(uuid.UUID), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	// Если загружен файл - используем его (для отладки)
+	// Если файла нет - мем остаётся в статусе "pending" для будущей обработки нейронкой
+	file, err := c.FormFile("image")
+	if err == nil {
+		if err := h.memeService.UploadMemeImage(c.Request.Context(), meme.ID, file); err != nil {
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+			return
+		}
+		meme, _ = h.memeService.GetMeme(c.Request.Context(), meme.ID)
+	}
+
+	c.JSON(http.StatusCreated, meme)
+}
+
+// @Summary Get meme by ID
+// @Description Get meme details by ID
+// @Tags memes
+// @Produce json
+// @Param id path string true "Meme ID"
+// @Success 200 {object} models.Meme
+// @Failure 404 {object} ErrorResponse
+// @Router /memes/{id} [get]
+func (h *MemeHandler) GetMeme(c *gin.Context) {
+	memeID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid meme ID"})
+		return
+	}
+
+	meme, err := h.memeService.GetMeme(c.Request.Context(), memeID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "meme not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, meme)
+}
+
+// @Summary Get user memes
+// @Description Get list of memes created by current user
+// @Tags memes
+// @Produce json
+// @Param limit query int false "Limit" default(10)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {array} models.Meme
+// @Failure 401 {object} ErrorResponse
+// @Router /memes/my [get]
+func (h *MemeHandler) GetMyMemes(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		return
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	memes, err := h.memeService.GetUserMemes(c.Request.Context(), userID.(uuid.UUID), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, memes)
+}
+
+// @Summary Get all memes
+// @Description Get paginated list of all memes
+// @Tags memes
+// @Produce json
+// @Param limit query int false "Limit" default(10)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {array} models.Meme
+// @Router /memes [get]
+func (h *MemeHandler) GetAllMemes(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	memes, err := h.memeService.GetAllMemes(c.Request.Context(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, memes)
+}
+
+// @Summary Delete meme
+// @Description Delete meme by ID (only owner can delete)
+// @Tags memes
+// @Produce json
+// @Param id path string true "Meme ID"
+// @Success 200 {object} MessageResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /memes/{id} [delete]
+func (h *MemeHandler) DeleteMeme(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		return
+	}
+
+	memeID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid meme ID"})
+		return
+	}
+
+	err = h.memeService.DeleteMeme(c.Request.Context(), userID.(uuid.UUID), memeID)
+	if err != nil {
+		if err == services.ErrMemeNotFound {
+			c.JSON(http.StatusNotFound, ErrorResponse{Error: "meme not found"})
+			return
+		}
+		if err == services.ErrUnauthorized {
+			c.JSON(http.StatusForbidden, ErrorResponse{Error: "unauthorized to delete this meme"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, MessageResponse{Message: "meme deleted successfully"})
+}

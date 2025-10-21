@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"mime/multipart"
 
 	"memology-backend/internal/models"
 
@@ -58,4 +59,17 @@ type UpdateProfileRequest struct {
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password" validate:"required" example:"oldpassword"`
 	NewPassword     string `json:"new_password" validate:"required,min=6" example:"newpassword123"`
+}
+
+type MemeService interface {
+	CreateMeme(ctx context.Context, userID uuid.UUID, req CreateMemeRequest) (*models.Meme, error)
+	UploadMemeImage(ctx context.Context, memeID uuid.UUID, file *multipart.FileHeader) error
+	GetMeme(ctx context.Context, memeID uuid.UUID) (*models.Meme, error)
+	GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, error)
+	GetAllMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error)
+	DeleteMeme(ctx context.Context, userID, memeID uuid.UUID) error
+}
+
+type CreateMemeRequest struct {
+	Prompt string `json:"prompt" validate:"required" example:"funny cat meme"`
 }

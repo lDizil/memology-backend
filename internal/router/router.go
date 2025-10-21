@@ -12,7 +12,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func SetupRouter(authService services.AuthService, userService services.UserService) *gin.Engine {
+func SetupRouter(authService services.AuthService, userService services.UserService, memeService services.MemeService) *gin.Engine {
 	r := gin.Default()
 
 	// CORS middleware with credentials support
@@ -33,6 +33,7 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 
 	authHandler := handlers.NewAuthHandler(authService)
 	userHandler := handlers.NewUserHandler(userService)
+	memeHandler := handlers.NewMemeHandler(memeService)
 
 	// Swagger UI
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -67,6 +68,17 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 			users.PUT("/profile/update", userHandler.UpdateProfile)
 			users.POST("/change-password", userHandler.ChangePassword)
 			users.GET("/list", userHandler.GetUsers)
+		}
+
+		memes := api.Group("/memes")
+		{
+			memes.GET("", memeHandler.GetAllMemes)
+			memes.GET("/:id", memeHandler.GetMeme)
+
+			memes.Use(middleware.JWTAuth(authService))
+			memes.POST("/generate", memeHandler.GenerateMeme)
+			memes.GET("/my", memeHandler.GetMyMemes)
+			memes.DELETE("/:id", memeHandler.DeleteMeme)
 		}
 	}
 
