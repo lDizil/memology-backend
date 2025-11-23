@@ -243,9 +243,9 @@ const docTemplate = `{
         },
         "/memes/generate": {
             "post": {
-                "description": "Generate meme from prompt. Image is optional (for debugging). Without image, meme will be in 'pending' status waiting for neural network processing.",
+                "description": "Generate meme from user input using neural network. Style is optional. Returns meme with pending status and task_id for checking progress.",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -256,17 +256,13 @@ const docTemplate = `{
                 "summary": "Generate new meme",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Meme generation prompt",
-                        "name": "prompt",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Meme image file (optional, for debugging)",
-                        "name": "image",
-                        "in": "formData"
+                        "description": "Meme generation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateMemeRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -329,6 +325,35 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/memes/styles": {
+            "get": {
+                "description": "Get list of available meme generation styles from neural network",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memes"
+                ],
+                "summary": "Get available meme styles",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -403,6 +428,84 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/memes/{id}/status": {
+            "get": {
+                "description": "Check if meme generation is completed and fetch result if ready",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memes"
+                ],
+                "summary": "Check meme generation status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Meme ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Meme"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/account": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete current user account and all associated data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete user account",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MessageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -653,6 +756,12 @@ const docTemplate = `{
                 "status": {
                     "type": "string"
                 },
+                "style": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -756,6 +865,22 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 6,
                     "example": "newpassword123"
+                }
+            }
+        },
+        "services.CreateMemeRequest": {
+            "type": "object",
+            "required": [
+                "prompt"
+            ],
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "example": "я купил компьютер за 1000000"
+                },
+                "style": {
+                    "type": "string",
+                    "example": "anime"
                 }
             }
         },

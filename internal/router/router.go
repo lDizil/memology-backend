@@ -68,12 +68,15 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 			users.PUT("/profile/update", userHandler.UpdateProfile)
 			users.POST("/change-password", userHandler.ChangePassword)
 			users.GET("/list", userHandler.GetUsers)
+			users.DELETE("/account", userHandler.DeleteAccount)
 		}
 
 		memes := api.Group("/memes")
 		{
 			memes.GET("", memeHandler.GetAllMemes)
+			memes.GET("/styles", memeHandler.GetAvailableStyles)
 			memes.GET("/:id", memeHandler.GetMeme)
+			memes.GET("/:id/status", memeHandler.CheckMemeStatus)
 
 			memes.Use(middleware.JWTAuth(authService))
 			memes.POST("/generate", memeHandler.GenerateMeme)

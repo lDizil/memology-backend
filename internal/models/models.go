@@ -36,9 +36,11 @@ type Meme struct {
 	ID               uuid.UUID      `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
 	UserID           uuid.UUID      `json:"user_id" gorm:"not null"`
 	Prompt           string         `json:"prompt" gorm:"not null"`
-	ImageURL         string         `json:"image_url" gorm:"not null"`
+	Style            string         `json:"style,omitempty"`
+	ImageURL         string         `json:"image_url"`
+	TaskID           string         `json:"task_id,omitempty"`
 	GenerationTimeMs int            `json:"generation_time_ms,omitempty"`
-	Status           string         `json:"status" gorm:"default:completed"`
+	Status           string         `json:"status" gorm:"default:pending"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 	DeletedAt        gorm.DeletedAt `json:"-" gorm:"index"`

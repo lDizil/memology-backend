@@ -68,8 +68,12 @@ type MemeService interface {
 	GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, error)
 	GetAllMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error)
 	DeleteMeme(ctx context.Context, userID, memeID uuid.UUID) error
+	CheckTaskStatus(ctx context.Context, memeID uuid.UUID) (*models.Meme, error)
+	ProcessCompletedTask(ctx context.Context, memeID uuid.UUID) error
+	GetAvailableStyles(ctx context.Context) ([]string, error)
 }
 
 type CreateMemeRequest struct {
-	Prompt string `json:"prompt" validate:"required" example:"funny cat meme"`
+	Prompt string `json:"prompt" validate:"required" example:"я купил компьютер за 1000000"`
+	Style  string `json:"style,omitempty" example:"anime"`
 }

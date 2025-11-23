@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 
 type MinIOService interface {
 	UploadMeme(ctx context.Context, file *multipart.FileHeader) (string, error)
+	UploadBytes(ctx context.Context, objectName string, data []byte) error
 	DeleteMeme(ctx context.Context, objectName string) error
 	GetMemeURL(objectName string) string
 }
@@ -77,6 +79,19 @@ func (s *minioService) UploadMeme(ctx context.Context, file *multipart.FileHeade
 	}
 
 	return objectName, nil
+}
+
+func (s *minioService) UploadBytes(ctx context.Context, objectName string, data []byte) error {
+	_, err := s.client.PutObject(ctx, s.bucket, objectName,
+		bytes.NewReader(data),
+		int64(len(data)),
+		minio.PutObjectOptions{
+			ContentType: "image/jpeg",
+		})
+	if err != nil {
+		return fmt.Errorf("failed to upload bytes: %w", err)
+	}
+	return nil
 }
 
 func (s *minioService) DeleteMeme(ctx context.Context, objectName string) error {

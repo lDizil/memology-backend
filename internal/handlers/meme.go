@@ -24,12 +24,11 @@ func NewMemeHandler(memeService services.MemeService) *MemeHandler {
 }
 
 // @Summary Generate new meme
-// @Description Generate meme from prompt. Image is optional (for debugging). Without image, meme will be in 'pending' status waiting for neural network processing.
+// @Description Generate meme from user input using neural network. Style is optional. Returns meme with pending status and task_id for checking progress.
 // @Tags memes
-// @Accept multipart/form-data
+// @Accept json
 // @Produce json
-// @Param prompt formData string true "Meme generation prompt"
-// @Param image formData file false "Meme image file (optional, for debugging)"
+// @Param request body services.CreateMemeRequest true "Meme generation request"
 // @Success 201 {object} models.Meme
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -41,31 +40,21 @@ func (h *MemeHandler) GenerateMeme(c *gin.Context) {
 		return
 	}
 
-	prompt := c.PostForm("prompt")
-	if prompt == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "prompt is required"})
+	var req services.CreateMemeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	req := services.CreateMemeRequest{
-		Prompt: prompt,
+	if req.Prompt == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "prompt is required"})
+		return
 	}
 
 	meme, err := h.memeService.CreateMeme(c.Request.Context(), userID.(uuid.UUID), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
-	}
-
-	// Если загружен файл - используем его (для отладки)
-	// Если файла нет - мем остаётся в статусе "pending" для будущей обработки нейронкой
-	file, err := c.FormFile("image")
-	if err == nil {
-		if err := h.memeService.UploadMemeImage(c.Request.Context(), meme.ID, file); err != nil {
-			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
-			return
-		}
-		meme, _ = h.memeService.GetMeme(c.Request.Context(), meme.ID)
 	}
 
 	c.JSON(http.StatusCreated, meme)
@@ -181,4 +170,50 @@ func (h *MemeHandler) DeleteMeme(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, MessageResponse{Message: "meme deleted successfully"})
+}
+
+// @Summary Check meme generation status
+// @Description Check if meme generation is completed and fetch result if ready
+// @Tags memes
+// @Produce json
+// @Param id path string true "Meme ID"
+// @Success 200 {object} models.Meme
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /memes/{id}/status [get]
+func (h *MemeHandler) CheckMemeStatus(c *gin.Context) {
+	memeID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid meme ID"})
+		return
+	}
+
+	meme, err := h.memeService.CheckTaskStatus(c.Request.Context(), memeID)
+	if err != nil {
+		if err == services.ErrMemeNotFound {
+			c.JSON(http.StatusNotFound, ErrorResponse{Error: "meme not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, meme)
+}
+
+// @Summary Get available meme styles
+// @Description Get list of available meme generation styles from neural network
+// @Tags memes
+// @Produce json
+// @Success 200 {array} string
+// @Failure 500 {object} ErrorResponse
+// @Router /memes/styles [get]
+func (h *MemeHandler) GetAvailableStyles(c *gin.Context) {
+	styles, err := h.memeService.GetAvailableStyles(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, styles)
 }

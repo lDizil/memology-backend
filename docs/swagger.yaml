@@ -26,6 +26,10 @@ definitions:
         type: string
       status:
         type: string
+      style:
+        type: string
+      task_id:
+        type: string
       updated_at:
         type: string
       user_id:
@@ -97,6 +101,17 @@ definitions:
     required:
     - current_password
     - new_password
+    type: object
+  services.CreateMemeRequest:
+    properties:
+      prompt:
+        example: я купил компьютер за 1000000
+        type: string
+      style:
+        example: anime
+        type: string
+    required:
+    - prompt
     type: object
   services.LoginRequest:
     properties:
@@ -343,22 +358,46 @@ paths:
       summary: Get meme by ID
       tags:
       - memes
+  /memes/{id}/status:
+    get:
+      description: Check if meme generation is completed and fetch result if ready
+      parameters:
+      - description: Meme ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Meme'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Check meme generation status
+      tags:
+      - memes
   /memes/generate:
     post:
       consumes:
-      - multipart/form-data
-      description: Generate meme from prompt. Image is optional (for debugging). Without
-        image, meme will be in 'pending' status waiting for neural network processing.
+      - application/json
+      description: Generate meme from user input using neural network. Style is optional.
+        Returns meme with pending status and task_id for checking progress.
       parameters:
-      - description: Meme generation prompt
-        in: formData
-        name: prompt
+      - description: Meme generation request
+        in: body
+        name: request
         required: true
-        type: string
-      - description: Meme image file (optional, for debugging)
-        in: formData
-        name: image
-        type: file
+        schema:
+          $ref: '#/definitions/services.CreateMemeRequest'
       produces:
       - application/json
       responses:
@@ -407,6 +446,48 @@ paths:
       summary: Get user memes
       tags:
       - memes
+  /memes/styles:
+    get:
+      description: Get list of available meme generation styles from neural network
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get available meme styles
+      tags:
+      - memes
+  /users/account:
+    delete:
+      description: Delete current user account and all associated data
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete user account
+      tags:
+      - users
   /users/change-password:
     post:
       consumes:

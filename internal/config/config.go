@@ -13,6 +13,7 @@ type Config struct {
 	Database DatabaseConfig
 	JWT      JWTConfig
 	MinIO    MinIOConfig
+	AI       AIConfig
 }
 
 type ServerConfig struct {
@@ -37,11 +38,16 @@ type JWTConfig struct {
 
 type MinIOConfig struct {
 	Endpoint  string
-	PublicURL string // URL для фронтенда (localhost:9000)
+	PublicURL string
 	AccessKey string
 	SecretKey string
 	UseSSL    bool
 	Bucket    string
+}
+
+type AIConfig struct {
+	BaseURL string
+	Timeout time.Duration
 }
 
 func Load() *Config {
@@ -72,6 +78,10 @@ func Load() *Config {
 			SecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin123"),
 			UseSSL:    getEnvBool("MINIO_USE_SSL", false),
 			Bucket:    getEnv("MINIO_BUCKET", "memes"),
+		},
+		AI: AIConfig{
+			BaseURL: getEnv("AI_BASE_URL", "http://95.131.149.248:7080"),
+			Timeout: getEnvDuration("AI_TIMEOUT", time.Second*120),
 		},
 	}
 }

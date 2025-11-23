@@ -331,6 +331,33 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
+// @Summary Delete user account
+// @Description Delete current user account and all associated data
+// @Tags users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} MessageResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /users/account [delete]
+func (h *UserHandler) DeleteAccount(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		return
+	}
+
+	err := h.userService.DeleteAccount(c.Request.Context(), userID.(uuid.UUID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	clearAuthCookies(c)
+
+	c.JSON(http.StatusOK, MessageResponse{Message: "account deleted successfully"})
+}
+
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }

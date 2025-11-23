@@ -40,9 +40,11 @@ func main() {
 		log.Fatal("Failed to initialize MinIO:", err)
 	}
 
+	aiService := services.NewAIService(&cfg.AI)
+
 	authService := services.NewAuthService(userRepo, sessionRepo, jwtManager)
 	userService := services.NewUserService(userRepo)
-	memeService := services.NewMemeService(memeRepo, minioService)
+	memeService := services.NewMemeService(memeRepo, minioService, aiService)
 
 	r := router.SetupRouter(authService, userService, memeService)
 
