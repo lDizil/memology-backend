@@ -59,7 +59,6 @@ func (tp *TaskProcessor) Start() {
 	log.Println("Task Processor started successfully")
 }
 
-// Stop останавливает worker pool
 func (tp *TaskProcessor) Stop() {
 	log.Println("Stopping Task Processor...")
 	tp.cancel()
