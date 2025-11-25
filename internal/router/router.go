@@ -34,18 +34,20 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 	userHandler := handlers.NewUserHandler(userService)
 	memeHandler := handlers.NewMemeHandler(memeService)
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	apiRoot := r.Group("/api")
+	{
+		apiRoot.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		apiRoot.GET("/openapi.json", func(c *gin.Context) {
+			openapi3JSON, err := GetOpenAPI3Spec(docs.SwaggerJSON)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 
-	r.GET("/openapi.json", func(c *gin.Context) {
-		openapi3JSON, err := GetOpenAPI3Spec(docs.SwaggerJSON)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.Header("Content-Type", "application/json")
-		c.String(http.StatusOK, string(openapi3JSON))
-	})
+			c.Header("Content-Type", "application/json")
+			c.String(http.StatusOK, string(openapi3JSON))
+		})
+	}
 
 	api := r.Group("/api/v1")
 	{
