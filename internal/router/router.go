@@ -15,7 +15,6 @@ import (
 func SetupRouter(authService services.AuthService, userService services.UserService, memeService services.MemeService) *gin.Engine {
 	r := gin.Default()
 
-	// CORS middleware with credentials support
 	r.Use(func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 		if origin != "" {
@@ -35,10 +34,8 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 	userHandler := handlers.NewUserHandler(userService)
 	memeHandler := handlers.NewMemeHandler(memeService)
 
-	// Swagger UI
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// OpenAPI 3.0 endpoint
 	r.GET("/openapi.json", func(c *gin.Context) {
 		openapi3JSON, err := GetOpenAPI3Spec(docs.SwaggerJSON)
 		if err != nil {

@@ -130,7 +130,7 @@ func (s *memeService) CheckTaskStatus(ctx context.Context, memeID uuid.UUID) (*m
 		return nil, fmt.Errorf("failed to check task status: %w", err)
 	}
 
-	if taskStatus.Status == "completed" {
+	if taskStatus.Status == "completed" || taskStatus.Status == "SUCCESS" {
 		if err := s.ProcessCompletedTask(ctx, memeID); err != nil {
 			return nil, fmt.Errorf("failed to process completed task: %w", err)
 		}
