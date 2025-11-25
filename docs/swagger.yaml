@@ -20,6 +20,8 @@ definitions:
         type: string
       image_url:
         type: string
+      is_public:
+        type: boolean
       metrics:
         $ref: '#/definitions/models.MemeMetrics'
       prompt:
@@ -104,6 +106,9 @@ definitions:
     type: object
   services.CreateMemeRequest:
     properties:
+      is_public:
+        example: true
+        type: boolean
       prompt:
         example: я купил компьютер за 1000000
         type: string
@@ -285,7 +290,7 @@ paths:
       - auth
   /memes:
     get:
-      description: Get paginated list of all memes
+      description: Get paginated list of all memes (admin only)
       parameters:
       - default: 10
         description: Limit
@@ -337,7 +342,8 @@ paths:
       tags:
       - memes
     get:
-      description: Get meme details by ID
+      description: Get meme details by ID. Private memes can only be viewed by their
+        owner.
       parameters:
       - description: Meme ID
         in: path
@@ -351,6 +357,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.Meme'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -389,8 +399,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Generate meme from user input using neural network. Style is optional.
-        Returns meme with pending status and task_id for checking progress.
+      description: Generate meme from user input using neural network. Style and is_public
+        are optional. Returns meme with pending status and task_id for checking progress.
+        By default, memes are public.
       parameters:
       - description: Meme generation request
         in: body
@@ -444,6 +455,32 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
       summary: Get user memes
+      tags:
+      - memes
+  /memes/public:
+    get:
+      description: Get paginated list of public memes
+      parameters:
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Meme'
+            type: array
+      summary: Get public memes
       tags:
       - memes
   /memes/styles:

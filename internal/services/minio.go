@@ -37,16 +37,34 @@ func NewMinIOService(cfg *config.MinIOConfig) (MinIOService, error) {
 		return nil, fmt.Errorf("failed to create minio client: %w", err)
 	}
 
-	exists, err := client.BucketExists(context.Background(), cfg.Bucket)
+	ctx := context.Background()
+	exists, err := client.BucketExists(ctx, cfg.Bucket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check bucket existence: %w", err)
 	}
 
 	if !exists {
-		err = client.MakeBucket(context.Background(), cfg.Bucket, minio.MakeBucketOptions{})
+		err = client.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create bucket: %w", err)
 		}
+	}
+
+	policy := fmt.Sprintf(`{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Principal": {"AWS": ["*"]},
+				"Action": ["s3:GetObject"],
+				"Resource": ["arn:aws:s3:::%s/*"]
+			}
+		]
+	}`, cfg.Bucket)
+
+	err = client.SetBucketPolicy(ctx, cfg.Bucket, policy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set bucket policy: %w", err)
 	}
 
 	return &minioService{

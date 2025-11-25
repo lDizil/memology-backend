@@ -71,6 +71,7 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 		memes := api.Group("/memes")
 		{
 			memes.GET("", memeHandler.GetAllMemes)
+			memes.GET("/public", memeHandler.GetPublicMemes)
 			memes.GET("/styles", memeHandler.GetAvailableStyles)
 			memes.GET("/:id", memeHandler.GetMeme)
 			memes.GET("/:id/status", memeHandler.CheckMemeStatus)

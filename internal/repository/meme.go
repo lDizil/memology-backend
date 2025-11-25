@@ -52,6 +52,19 @@ func (r *memeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Delete(&models.Meme{}, "id = ?", id).Error
 }
 
+func (r *memeRepository) GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error) {
+	var memes []*models.Meme
+	err := r.db.WithContext(ctx).
+		Where("is_public = ?", true).
+		Preload("User").
+		Preload("Metrics").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&memes).Error
+	return memes, err
+}
+
 func (r *memeRepository) List(ctx context.Context, limit, offset int) ([]*models.Meme, error) {
 	var memes []*models.Meme
 	err := r.db.WithContext(ctx).

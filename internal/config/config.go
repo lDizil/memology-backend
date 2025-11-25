@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	MinIO    MinIOConfig
-	AI       AIConfig
+	Server        ServerConfig
+	Database      DatabaseConfig
+	JWT           JWTConfig
+	MinIO         MinIOConfig
+	AI            AIConfig
+	TaskProcessor TaskProcessorConfig
 }
 
 type ServerConfig struct {
@@ -50,6 +51,12 @@ type AIConfig struct {
 	Timeout time.Duration
 }
 
+type TaskProcessorConfig struct {
+	Workers      int
+	QueueSize    int
+	PollInterval time.Duration
+}
+
 func Load() *Config {
 	godotenv.Load()
 
@@ -83,6 +90,11 @@ func Load() *Config {
 			BaseURL: getEnv("AI_BASE_URL", "http://95.131.149.248:7080"),
 			Timeout: getEnvDuration("AI_TIMEOUT", time.Second*120),
 		},
+		TaskProcessor: TaskProcessorConfig{
+			Workers:      getEnvInt("TASK_PROCESSOR_WORKERS", 10),
+			QueueSize:    getEnvInt("TASK_PROCESSOR_QUEUE_SIZE", 100),
+			PollInterval: getEnvDuration("TASK_PROCESSOR_POLL_INTERVAL", time.Second*5),
+		},
 	}
 }
 
@@ -108,6 +120,15 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 func getEnvBool(key string, defaultValue bool) bool {
 	if value := os.Getenv(key); value != "" {
 		if parsed, err := strconv.ParseBool(value); err == nil {
+			return parsed
+		}
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
 			return parsed
 		}
 	}

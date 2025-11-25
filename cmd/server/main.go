@@ -1,7 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	_ "memology-backend/docs"
 	"memology-backend/internal/config"
@@ -46,10 +52,38 @@ func main() {
 	userService := services.NewUserService(userRepo)
 	memeService := services.NewMemeService(memeRepo, minioService, aiService)
 
+	taskProcessor := services.NewTaskProcessor(cfg, memeRepo, aiService, minioService)
+	taskProcessor.Start()
+	defer taskProcessor.Stop()
+
+	memeService = services.NewMemeServiceWithProcessor(memeRepo, minioService, aiService, taskProcessor)
+
 	r := router.SetupRouter(authService, userService, memeService)
 
-	log.Printf("Server starting on %s:%s", cfg.Server.Host, cfg.Server.Port)
-	if err := r.Run(":" + cfg.Server.Port); err != nil {
-		log.Fatal("Failed to start server:", err)
+	srv := &http.Server{
+		Addr:    ":" + cfg.Server.Port,
+		Handler: r,
 	}
+
+	go func() {
+		log.Printf("Server starting on %s:%s", cfg.Server.Host, cfg.Server.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Failed to start server:", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	log.Println("Server exited")
 }

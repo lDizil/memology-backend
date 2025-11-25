@@ -24,7 +24,7 @@ func NewMemeHandler(memeService services.MemeService) *MemeHandler {
 }
 
 // @Summary Generate new meme
-// @Description Generate meme from user input using neural network. Style is optional. Returns meme with pending status and task_id for checking progress.
+// @Description Generate meme from user input using neural network. Style and is_public are optional. Returns meme with pending status and task_id for checking progress. By default, memes are public.
 // @Tags memes
 // @Accept json
 // @Produce json
@@ -61,11 +61,12 @@ func (h *MemeHandler) GenerateMeme(c *gin.Context) {
 }
 
 // @Summary Get meme by ID
-// @Description Get meme details by ID
+// @Description Get meme details by ID. Private memes can only be viewed by their owner.
 // @Tags memes
 // @Produce json
 // @Param id path string true "Meme ID"
 // @Success 200 {object} models.Meme
+// @Failure 403 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Router /memes/{id} [get]
 func (h *MemeHandler) GetMeme(c *gin.Context) {
@@ -79,6 +80,14 @@ func (h *MemeHandler) GetMeme(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusNotFound, ErrorResponse{Error: "meme not found"})
 		return
+	}
+
+	if !meme.IsPublic {
+		userID, exists := c.Get("user_id")
+		if !exists || meme.UserID != userID.(uuid.UUID) {
+			c.JSON(http.StatusForbidden, ErrorResponse{Error: "access denied to private meme"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, meme)
@@ -112,8 +121,29 @@ func (h *MemeHandler) GetMyMemes(c *gin.Context) {
 	c.JSON(http.StatusOK, memes)
 }
 
+// @Summary Get public memes
+// @Description Get paginated list of public memes
+// @Tags memes
+// @Produce json
+// @Param limit query int false "Limit" default(10)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {array} models.Meme
+// @Router /memes/public [get]
+func (h *MemeHandler) GetPublicMemes(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	memes, err := h.memeService.GetPublicMemes(c.Request.Context(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, memes)
+}
+
 // @Summary Get all memes
-// @Description Get paginated list of all memes
+// @Description Get paginated list of all memes (admin only)
 // @Tags memes
 // @Produce json
 // @Param limit query int false "Limit" default(10)

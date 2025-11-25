@@ -204,7 +204,7 @@ const docTemplate = `{
         },
         "/memes": {
             "get": {
-                "description": "Get paginated list of all memes",
+                "description": "Get paginated list of all memes (admin only)",
                 "produces": [
                     "application/json"
                 ],
@@ -243,7 +243,7 @@ const docTemplate = `{
         },
         "/memes/generate": {
             "post": {
-                "description": "Generate meme from user input using neural network. Style is optional. Returns meme with pending status and task_id for checking progress.",
+                "description": "Generate meme from user input using neural network. Style and is_public are optional. Returns meme with pending status and task_id for checking progress. By default, memes are public.",
                 "consumes": [
                     "application/json"
                 ],
@@ -332,6 +332,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/memes/public": {
+            "get": {
+                "description": "Get paginated list of public memes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memes"
+                ],
+                "summary": "Get public memes",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Meme"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/memes/styles": {
             "get": {
                 "description": "Get list of available meme generation styles from neural network",
@@ -363,7 +402,7 @@ const docTemplate = `{
         },
         "/memes/{id}": {
             "get": {
-                "description": "Get meme details by ID",
+                "description": "Get meme details by ID. Private memes can only be viewed by their owner.",
                 "produces": [
                     "application/json"
                 ],
@@ -385,6 +424,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.Meme"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "404": {
@@ -747,6 +792,9 @@ const docTemplate = `{
                 "image_url": {
                     "type": "string"
                 },
+                "is_public": {
+                    "type": "boolean"
+                },
                 "metrics": {
                     "$ref": "#/definitions/models.MemeMetrics"
                 },
@@ -874,6 +922,10 @@ const docTemplate = `{
                 "prompt"
             ],
             "properties": {
+                "is_public": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "prompt": {
                     "type": "string",
                     "example": "я купил компьютер за 1000000"

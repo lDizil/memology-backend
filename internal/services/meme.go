@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"mime/multipart"
 
 	"memology-backend/internal/models"
@@ -20,25 +21,42 @@ var (
 )
 
 type memeService struct {
-	memeRepo repository.MemeRepository
-	minioSvc MinIOService
-	aiSvc    AIService
+	memeRepo      repository.MemeRepository
+	minioSvc      MinIOService
+	aiSvc         AIService
+	taskProcessor *TaskProcessor
 }
 
 func NewMemeService(memeRepo repository.MemeRepository, minioSvc MinIOService, aiSvc AIService) MemeService {
 	return &memeService{
-		memeRepo: memeRepo,
-		minioSvc: minioSvc,
-		aiSvc:    aiSvc,
+		memeRepo:      memeRepo,
+		minioSvc:      minioSvc,
+		aiSvc:         aiSvc,
+		taskProcessor: nil,
+	}
+}
+
+func NewMemeServiceWithProcessor(memeRepo repository.MemeRepository, minioSvc MinIOService, aiSvc AIService, taskProcessor *TaskProcessor) MemeService {
+	return &memeService{
+		memeRepo:      memeRepo,
+		minioSvc:      minioSvc,
+		aiSvc:         aiSvc,
+		taskProcessor: taskProcessor,
 	}
 }
 
 func (s *memeService) CreateMeme(ctx context.Context, userID uuid.UUID, req CreateMemeRequest) (*models.Meme, error) {
+	isPublic := true
+	if req.IsPublic != nil {
+		isPublic = *req.IsPublic
+	}
+
 	meme := &models.Meme{
-		UserID: userID,
-		Prompt: req.Prompt,
-		Style:  req.Style,
-		Status: "pending",
+		UserID:   userID,
+		Prompt:   req.Prompt,
+		Style:    req.Style,
+		Status:   "pending",
+		IsPublic: isPublic,
 	}
 
 	taskID, err := s.aiSvc.GenerateMeme(ctx, req.Prompt, req.Style)
@@ -50,6 +68,12 @@ func (s *memeService) CreateMeme(ctx context.Context, userID uuid.UUID, req Crea
 
 	if err := s.memeRepo.Create(ctx, meme); err != nil {
 		return nil, fmt.Errorf("failed to create meme: %w", err)
+	}
+
+	if s.taskProcessor != nil {
+		if err := s.taskProcessor.AddTask(meme.ID); err != nil {
+			log.Printf("Warning: failed to add task to processor: %v", err)
+		}
 	}
 
 	return meme, nil
@@ -88,6 +112,10 @@ func (s *memeService) GetMeme(ctx context.Context, memeID uuid.UUID) (*models.Me
 
 func (s *memeService) GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, error) {
 	return s.memeRepo.GetByUserID(ctx, userID, limit, offset)
+}
+
+func (s *memeService) GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error) {
+	return s.memeRepo.GetPublicMemes(ctx, limit, offset)
 }
 
 func (s *memeService) GetAllMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error) {

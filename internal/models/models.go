@@ -41,6 +41,7 @@ type Meme struct {
 	TaskID           string         `json:"task_id,omitempty"`
 	GenerationTimeMs int            `json:"generation_time_ms,omitempty"`
 	Status           string         `json:"status" gorm:"default:pending"`
+	IsPublic         bool           `json:"is_public" gorm:"default:true"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 	DeletedAt        gorm.DeletedAt `json:"-" gorm:"index"`

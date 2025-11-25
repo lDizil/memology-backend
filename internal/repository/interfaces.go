@@ -32,6 +32,7 @@ type MemeRepository interface {
 	Create(ctx context.Context, meme *models.Meme) error
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Meme, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, error)
+	GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error)
 	Update(ctx context.Context, meme *models.Meme) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, limit, offset int) ([]*models.Meme, error)
