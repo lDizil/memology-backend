@@ -76,3 +76,29 @@ func (r *memeRepository) List(ctx context.Context, limit, offset int) ([]*models
 		Find(&memes).Error
 	return memes, err
 }
+
+func (r *memeRepository) CountByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Meme{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *memeRepository) CountPublicMemes(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Meme{}).
+		Where("is_public = ?", true).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *memeRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Meme{}).
+		Count(&count).Error
+	return count, err
+}

@@ -36,6 +36,10 @@ type MemeRepository interface {
 	Update(ctx context.Context, meme *models.Meme) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, limit, offset int) ([]*models.Meme, error)
+
+	CountByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountPublicMemes(ctx context.Context) (int64, error)
+	Count(ctx context.Context) (int64, error)
 }
 
 type MetricsRepository interface {

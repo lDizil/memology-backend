@@ -65,9 +65,9 @@ type MemeService interface {
 	CreateMeme(ctx context.Context, userID uuid.UUID, req CreateMemeRequest) (*models.Meme, error)
 	UploadMemeImage(ctx context.Context, memeID uuid.UUID, file *multipart.FileHeader) error
 	GetMeme(ctx context.Context, memeID uuid.UUID) (*models.Meme, error)
-	GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, error)
-	GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error)
-	GetAllMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error)
+	GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, int64, error)
+	GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, int64, error)
+	GetAllMemes(ctx context.Context, limit, offset int) ([]*models.Meme, int64, error)
 	DeleteMeme(ctx context.Context, userID, memeID uuid.UUID) error
 	CheckTaskStatus(ctx context.Context, memeID uuid.UUID) (*models.Meme, error)
 	ProcessCompletedTask(ctx context.Context, memeID uuid.UUID) error

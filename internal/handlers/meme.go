@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"memology-backend/internal/models"
 	"memology-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,13 @@ func NewMemeHandler(memeService services.MemeService) *MemeHandler {
 		memeService: memeService,
 		validator:   validator.New(),
 	}
+}
+
+type MemeHistoryResponse struct {
+	Memes []*models.Meme `json:"memes"`
+	Total int64          `json:"total"`
+	Page  int            `json:"page"`
+	Limit int            `json:"limit"`
 }
 
 // @Summary Generate new meme
@@ -94,12 +102,12 @@ func (h *MemeHandler) GetMeme(c *gin.Context) {
 }
 
 // @Summary Get user memes
-// @Description Get list of memes created by current user
+// @Description Get list of memes created by current user with pagination
 // @Tags memes
 // @Produce json
-// @Param limit query int false "Limit" default(10)
-// @Param offset query int false "Offset" default(0)
-// @Success 200 {array} models.Meme
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(20)
+// @Success 200 {object} MemeHistoryResponse
 // @Failure 401 {object} ErrorResponse
 // @Router /memes/my [get]
 func (h *MemeHandler) GetMyMemes(c *gin.Context) {
@@ -109,58 +117,112 @@ func (h *MemeHandler) GetMyMemes(c *gin.Context) {
 		return
 	}
 
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	page := 1
+	if p, exists := c.GetQuery("page"); exists {
+		if val, err := strconv.Atoi(p); err == nil && val > 0 {
+			page = val
+		}
+	}
 
-	memes, err := h.memeService.GetUserMemes(c.Request.Context(), userID.(uuid.UUID), limit, offset)
+	limit := 20
+	if l, exists := c.GetQuery("limit"); exists {
+		if val, err := strconv.Atoi(l); err == nil && val > 0 && val <= 100 {
+			limit = val
+		}
+	}
+
+	offset := (page - 1) * limit
+
+	memes, total, err := h.memeService.GetUserMemes(c.Request.Context(), userID.(uuid.UUID), limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, memes)
+	c.JSON(http.StatusOK, MemeHistoryResponse{
+		Memes: memes,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
 }
 
 // @Summary Get public memes
 // @Description Get paginated list of public memes
 // @Tags memes
 // @Produce json
-// @Param limit query int false "Limit" default(10)
-// @Param offset query int false "Offset" default(0)
-// @Success 200 {array} models.Meme
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(20)
+// @Success 200 {object} MemeHistoryResponse
 // @Router /memes/public [get]
 func (h *MemeHandler) GetPublicMemes(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	page := 1
+	if p, exists := c.GetQuery("page"); exists {
+		if val, err := strconv.Atoi(p); err == nil && val > 0 {
+			page = val
+		}
+	}
 
-	memes, err := h.memeService.GetPublicMemes(c.Request.Context(), limit, offset)
+	limit := 20
+	if l, exists := c.GetQuery("limit"); exists {
+		if val, err := strconv.Atoi(l); err == nil && val > 0 && val <= 100 {
+			limit = val
+		}
+	}
+
+	offset := (page - 1) * limit
+
+	memes, total, err := h.memeService.GetPublicMemes(c.Request.Context(), limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, memes)
+	c.JSON(http.StatusOK, MemeHistoryResponse{
+		Memes: memes,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
 }
 
 // @Summary Get all memes
 // @Description Get paginated list of all memes (admin only)
 // @Tags memes
 // @Produce json
-// @Param limit query int false "Limit" default(10)
-// @Param offset query int false "Offset" default(0)
-// @Success 200 {array} models.Meme
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(20)
+// @Success 200 {object} MemeHistoryResponse
 // @Router /memes [get]
 func (h *MemeHandler) GetAllMemes(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	page := 1
+	if p, exists := c.GetQuery("page"); exists {
+		if val, err := strconv.Atoi(p); err == nil && val > 0 {
+			page = val
+		}
+	}
 
-	memes, err := h.memeService.GetAllMemes(c.Request.Context(), limit, offset)
+	limit := 20
+	if l, exists := c.GetQuery("limit"); exists {
+		if val, err := strconv.Atoi(l); err == nil && val > 0 && val <= 100 {
+			limit = val
+		}
+	}
+
+	offset := (page - 1) * limit
+
+	memes, total, err := h.memeService.GetAllMemes(c.Request.Context(), limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, memes)
+	c.JSON(http.StatusOK, MemeHistoryResponse{
+		Memes: memes,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
 }
 
 // @Summary Delete meme

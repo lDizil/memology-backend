@@ -110,16 +110,46 @@ func (s *memeService) GetMeme(ctx context.Context, memeID uuid.UUID) (*models.Me
 	return meme, nil
 }
 
-func (s *memeService) GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, error) {
-	return s.memeRepo.GetByUserID(ctx, userID, limit, offset)
+func (s *memeService) GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, int64, error) {
+	memes, err := s.memeRepo.GetByUserID(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.memeRepo.CountByUserID(ctx, userID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return memes, total, nil
 }
 
-func (s *memeService) GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error) {
-	return s.memeRepo.GetPublicMemes(ctx, limit, offset)
+func (s *memeService) GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, int64, error) {
+	memes, err := s.memeRepo.GetPublicMemes(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.memeRepo.CountPublicMemes(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return memes, total, nil
 }
 
-func (s *memeService) GetAllMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error) {
-	return s.memeRepo.List(ctx, limit, offset)
+func (s *memeService) GetAllMemes(ctx context.Context, limit, offset int) ([]*models.Meme, int64, error) {
+	memes, err := s.memeRepo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.memeRepo.Count(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return memes, total, nil
 }
 
 func (s *memeService) DeleteMeme(ctx context.Context, userID, memeID uuid.UUID) error {
