@@ -70,6 +70,8 @@ type MemeService interface {
 	GetAllMemes(ctx context.Context, limit, offset int) ([]*models.Meme, int64, error)
 	DeleteMeme(ctx context.Context, userID, memeID uuid.UUID) error
 	CheckTaskStatus(ctx context.Context, memeID uuid.UUID) (*models.Meme, error)
+	SearchPublicMemes(ctx context.Context, query string) ([]models.Meme, error)
+	SearchPrivateMemes(ctx context.Context, userID uuid.UUID, query string) ([]models.Meme, error)
 	ProcessCompletedTask(ctx context.Context, memeID uuid.UUID) error
 	GetAvailableStyles(ctx context.Context) ([]string, error)
 }

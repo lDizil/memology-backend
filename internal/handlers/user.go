@@ -222,6 +222,36 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// @Summary Get user profile by id
+// @Description Get user profile by id
+// @Tags users
+// @Produce json
+// @Param id path string true "User ID"
+// @Security BearerAuth
+// @Success 200 {object} models.User
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /users/profile/{id} [get]
+func (h *UserHandler) GetProfileByID(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid user ID"})
+		return
+	}
+
+	user, err := h.userService.GetProfile(c.Request.Context(), userID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == services.ErrUserNotFound {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
 // @Summary Update user profile
 // @Description Update current user profile
 // @Tags users

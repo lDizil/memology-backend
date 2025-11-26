@@ -309,3 +309,63 @@ func (h *MemeHandler) GetAvailableStyles(c *gin.Context) {
 
 	c.JSON(http.StatusOK, styles)
 }
+
+// @Summary Search public memes
+// @Description Search memes among public ones by query string
+// @Tags memes
+// @Accept json
+// @Produce json
+// @Param q query string true "Search query"
+// @Success 200 {array} models.Meme
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /memes/search/public [get]
+func (h *MemeHandler) SearchPublicMemes(c *gin.Context) {
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "query param 'q' is required"})
+		return
+	}
+
+	memes, err := h.memeService.SearchPublicMemes(c.Request.Context(), query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, memes)
+}
+
+// @Summary Search private memes
+// @Description Search memes created by the authorized user by query string
+// @Tags memes
+// @Accept json
+// @Produce json
+// @Param q query string true "Search query"
+// @Success 200 {array} models.Meme
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /memes/search/private [get]
+func (h *MemeHandler) SearchPrivateMemes(c *gin.Context) {
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "query param 'q' is required"})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	uid, ok := userID.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	memes, err := h.memeService.SearchPrivateMemes(c.Request.Context(), uid, query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, memes)
+}

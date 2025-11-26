@@ -238,6 +238,14 @@ func (s *memeService) ProcessCompletedTask(ctx context.Context, memeID uuid.UUID
 	return nil
 }
 
+func (s *memeService) SearchPublicMemes(ctx context.Context, query string) ([]models.Meme, error) {
+	return s.memeRepo.SearchPublicMemes(ctx, query)
+}
+
+func (s *memeService) SearchPrivateMemes(ctx context.Context, userID uuid.UUID, query string) ([]models.Meme, error) {
+	return s.memeRepo.SearchPrivateMemes(ctx, userID, query)
+}
+
 func (s *memeService) GetAvailableStyles(ctx context.Context) ([]string, error) {
 	return s.aiSvc.GetAvailableStyles(ctx)
 }

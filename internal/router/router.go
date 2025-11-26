@@ -61,13 +61,18 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 		}
 
 		users := api.Group("/users")
-		users.Use(middleware.JWTAuth(authService))
 		{
-			users.GET("/profile", userHandler.GetProfile)
-			users.PUT("/profile/update", userHandler.UpdateProfile)
-			users.POST("/change-password", userHandler.ChangePassword)
 			users.GET("/list", userHandler.GetUsers)
-			users.DELETE("/account", userHandler.DeleteAccount)
+			users.GET("/profile/:id", userHandler.GetProfileByID)
+		}
+
+		usersAuth := api.Group("/users")
+		usersAuth.Use(middleware.JWTAuth(authService))
+		{
+			usersAuth.GET("/profile", userHandler.GetProfile)
+			usersAuth.PUT("/profile/update", userHandler.UpdateProfile)
+			usersAuth.POST("/change-password", userHandler.ChangePassword)
+			usersAuth.DELETE("/account", userHandler.DeleteAccount)
 		}
 
 		memes := api.Group("/memes")
@@ -77,12 +82,20 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 			memes.GET("/styles", memeHandler.GetAvailableStyles)
 			memes.GET("/:id", memeHandler.GetMeme)
 			memes.GET("/:id/status", memeHandler.CheckMemeStatus)
+			memes.GET("/search/public", memeHandler.SearchPublicMemes)
 
 			memes.Use(middleware.JWTAuth(authService))
 			memes.POST("/generate", memeHandler.GenerateMeme)
 			memes.GET("/my", memeHandler.GetMyMemes)
 			memes.DELETE("/:id", memeHandler.DeleteMeme)
 		}
+
+		memesAuth := api.Group("/memes")
+		memesAuth.Use(middleware.JWTAuth(authService))
+		{
+			memesAuth.GET("/search/private", memeHandler.SearchPrivateMemes)
+		}
+
 	}
 
 	return r

@@ -77,6 +77,28 @@ func (r *memeRepository) List(ctx context.Context, limit, offset int) ([]*models
 	return memes, err
 }
 
+func (r *memeRepository) SearchPublicMemes(ctx context.Context, query string) ([]models.Meme, error) {
+	q := "%" + query + "%"
+	var memes []models.Meme
+	err := r.db.WithContext(ctx).Model(&models.Meme{}).
+		Where("is_public = TRUE AND prompt ILIKE ?", q).
+		Order("created_at DESC").
+		Find(&memes).Error
+
+	return memes, err
+}
+
+func (r *memeRepository) SearchPrivateMemes(ctx context.Context, userID uuid.UUID, query string) ([]models.Meme, error) {
+	q := "%" + query + "%"
+	var memes []models.Meme
+	err := r.db.WithContext(ctx).Model(&models.Meme{}).
+		Where("user_id = ? AND prompt ILIKE ?", userID, q).
+		Order("created_at DESC").
+		Find(&memes).Error
+
+	return memes, err
+}
+
 func (r *memeRepository) CountByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).
