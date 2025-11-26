@@ -38,6 +38,9 @@ type Meme struct {
 	Prompt           string         `json:"prompt" gorm:"not null"`
 	Style            string         `json:"style,omitempty"`
 	ImageURL         string         `json:"image_url"`
+	Width            int            `json:"width" gorm:"default:500"`
+	Height           int            `json:"height" gorm:"default:500"`
+	AspectRatio      string         `json:"aspect_ratio" gorm:"default:'1:1'"`
 	TaskID           string         `json:"task_id,omitempty"`
 	GenerationTimeMs int            `json:"generation_time_ms,omitempty"`
 	Status           string         `json:"status" gorm:"default:pending"`

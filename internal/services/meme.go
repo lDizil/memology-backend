@@ -52,11 +52,14 @@ func (s *memeService) CreateMeme(ctx context.Context, userID uuid.UUID, req Crea
 	}
 
 	meme := &models.Meme{
-		UserID:   userID,
-		Prompt:   req.Prompt,
-		Style:    req.Style,
-		Status:   "pending",
-		IsPublic: isPublic,
+		UserID:      userID,
+		Prompt:      req.Prompt,
+		Style:       req.Style,
+		Status:      "pending",
+		IsPublic:    isPublic,
+		Width:       500,
+		Height:      500,
+		AspectRatio: "1:1",
 	}
 
 	taskID, err := s.aiSvc.GenerateMeme(ctx, req.Prompt, req.Style)
