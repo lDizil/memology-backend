@@ -21,7 +21,6 @@ import (
 // @title Memology API
 // @version 1.0
 // @description API for meme generation platform
-// @host localhost:8080
 // @BasePath /api/v1
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -50,13 +49,12 @@ func main() {
 
 	authService := services.NewAuthService(userRepo, sessionRepo, jwtManager)
 	userService := services.NewUserService(userRepo)
-	memeService := services.NewMemeService(memeRepo, minioService, aiService)
 
 	taskProcessor := services.NewTaskProcessor(cfg, memeRepo, aiService, minioService)
 	taskProcessor.Start()
 	defer taskProcessor.Stop()
 
-	memeService = services.NewMemeServiceWithProcessor(memeRepo, minioService, aiService, taskProcessor)
+	memeService := services.NewMemeServiceWithProcessor(memeRepo, minioService, aiService, taskProcessor)
 
 	r := router.SetupRouter(authService, userService, memeService)
 

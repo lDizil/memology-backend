@@ -160,7 +160,6 @@ definitions:
         minLength: 3
         type: string
     type: object
-host: localhost:8080
 info:
   contact: {}
   description: API for meme generation platform
