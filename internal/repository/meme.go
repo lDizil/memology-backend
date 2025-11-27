@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"memology-backend/internal/models"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -123,4 +124,19 @@ func (r *memeRepository) Count(ctx context.Context) (int64, error) {
 		Model(&models.Meme{}).
 		Count(&count).Error
 	return count, err
+}
+
+func (r *memeRepository) FindStuckMemes(ctx context.Context, olderThan time.Duration) ([]*models.Meme, error) {
+	var memes []*models.Meme
+
+	threshold := time.Now().Add(-olderThan)
+
+	err := r.db.WithContext(ctx).
+		Model(&models.Meme{}).
+		Where("status IN (?, ?, ?)", "pending", "processing", "failed").
+		Where("updated_at < ?", threshold).
+		Order("updated_at ASC").
+		Find(&memes).Error
+
+	return memes, err
 }

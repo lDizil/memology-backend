@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"memology-backend/internal/models"
 
@@ -41,6 +42,7 @@ type MemeRepository interface {
 	CountByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountPublicMemes(ctx context.Context) (int64, error)
 	Count(ctx context.Context) (int64, error)
+	FindStuckMemes(ctx context.Context, olderThan time.Duration) ([]*models.Meme, error)
 }
 
 type MetricsRepository interface {

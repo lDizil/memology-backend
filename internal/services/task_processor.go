@@ -56,6 +56,9 @@ func (tp *TaskProcessor) Start() {
 		go tp.worker(i + 1)
 	}
 
+	tp.wg.Add(1)
+	go tp.stuckTasksScanner()
+
 	log.Println("Task Processor started successfully")
 }
 
@@ -65,6 +68,63 @@ func (tp *TaskProcessor) Stop() {
 	close(tp.taskQueue)
 	tp.wg.Wait()
 	log.Println("Task Processor stopped")
+}
+
+func (tp *TaskProcessor) stuckTasksScanner() {
+	defer tp.wg.Done()
+
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	log.Println("Stuck tasks scanner started (checking every 1 hour)")
+
+	tp.scanAndReschedule()
+
+	for {
+		select {
+		case <-tp.ctx.Done():
+			log.Println("Stuck tasks scanner stopped")
+			return
+		case <-ticker.C:
+			tp.scanAndReschedule()
+		}
+	}
+}
+
+func (tp *TaskProcessor) scanAndReschedule() {
+	log.Println("=== Scanning for stuck tasks ===")
+
+	stuckMemes, err := tp.memeRepo.FindStuckMemes(tp.ctx, 30*time.Minute)
+	if err != nil {
+		log.Printf("Failed to find stuck memes: %v", err)
+		return
+	}
+
+	log.Printf("Found %d stuck memes to reschedule", len(stuckMemes))
+
+	for _, meme := range stuckMemes {
+		tp.mu.Lock()
+		isProcessing := tp.processingIDs[meme.ID]
+		tp.mu.Unlock()
+
+		if !isProcessing {
+			log.Printf("Rescheduling stuck meme %s (status: %s, updated: %s)",
+				meme.ID, meme.Status, meme.UpdatedAt.Format("2006-01-02 15:04:05"))
+
+			meme.Status = "pending"
+			if err := tp.memeRepo.Update(tp.ctx, meme); err != nil {
+				log.Printf("Failed to reset status for meme %s: %v", meme.ID, err)
+				continue
+			}
+
+			if err := tp.AddTask(meme.ID); err != nil {
+				log.Printf("Failed to reschedule meme %s: %v", meme.ID, err)
+			}
+		} else {
+			log.Printf("Meme %s is already in processing, skipping", meme.ID)
+		}
+	}
+	log.Printf("Scan completed: rescheduled %d memes", len(stuckMemes))
 }
 
 func (tp *TaskProcessor) AddTask(memeID uuid.UUID) error {
@@ -152,8 +212,7 @@ func (tp *TaskProcessor) processTask(workerID int, memeID uuid.UUID) {
 		case <-ticker.C:
 			attempts++
 			if attempts > maxAttempts {
-				log.Printf("Worker %d: max attempts reached for meme %s, marking as failed", workerID, memeID)
-				tp.markAsFailed(memeID, "timeout: max polling attempts exceeded")
+				log.Printf("Worker %d: max attempts reached for meme %s - will be retried by scanner", workerID, memeID)
 				return
 			}
 
@@ -165,7 +224,7 @@ func (tp *TaskProcessor) processTask(workerID int, memeID uuid.UUID) {
 				continue
 			}
 
-			log.Printf("Worker %d: meme %s status: %s", workerID, memeID, taskStatus.Status)
+			log.Printf("Worker %d: meme %s AI status: %s", workerID, memeID, taskStatus.Status)
 
 			meme.Status = taskStatus.Status
 			if err := tp.memeRepo.Update(tp.ctx, meme); err != nil {
@@ -184,11 +243,10 @@ func (tp *TaskProcessor) processTask(workerID int, memeID uuid.UUID) {
 			}
 
 			if taskStatus.Status == "failed" || taskStatus.Status == "FAILED" || taskStatus.Status == "error" || taskStatus.Status == "ERROR" {
-				log.Printf("Worker %d: task failed for meme %s", workerID, memeID)
+				log.Printf("Worker %d: AI returned failed for meme %s", workerID, memeID)
 				tp.markAsFailed(memeID, "AI task failed")
 				return
 			}
-
 		}
 	}
 }

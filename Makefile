@@ -4,7 +4,6 @@ help:
 	@echo "Доступные команды:"
 	@echo "  build     - Собрать приложение"
 	@echo "  run       - Запустить приложение локально"
-	@echo "  dev-db    - Запустить только PostgreSQL для разработки"
 	@echo "  dev-up    - Запустить всё в Docker для разработки"
 	@echo "  dev-down  - Остановить Docker контейнеры"
 	@echo "  swagger   - Обновить Swagger документацию"
@@ -15,9 +14,6 @@ build:
 
 run:
 	go run ./cmd/server
-
-dev-db:
-	docker-compose -f docker-compose.dev.yml up -d
 
 dev-up:
 	docker-compose up --build
@@ -32,4 +28,3 @@ swagger:
 clean:
 	rm -rf bin/
 	docker-compose down -v
-	docker-compose -f docker-compose.dev.yml down -v

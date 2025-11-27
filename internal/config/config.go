@@ -87,7 +87,7 @@ func Load() *Config {
 			Bucket:    getEnv("MINIO_BUCKET", "memes"),
 		},
 		AI: AIConfig{
-			BaseURL: getEnv("AI_BASE_URL", "http://95.131.149.248:7080"),
+			BaseURL: getEnv("AI_BASE_URL", "http://localhost:7080"),
 			Timeout: getEnvDuration("AI_TIMEOUT", time.Second*120),
 		},
 		TaskProcessor: TaskProcessorConfig{

@@ -1,35 +1,42 @@
 # Memology Backend
 
-API для платформы генерации мемов на Go с JWT авторизацией и PostgreSQL.
+API для платформы генерации мемов на Go с JWT авторизацией, PostgreSQL, асинхронной обработкой, MinIO и Clean Architecture.
 
 ## Быстрый старт
 
-### 1. Запуск БД для разработки
+### 1. Клонирование репозитория
 
 ```bash
-make dev-db
-# или
-docker-compose -f docker-compose.dev.yml up -d
+git clone https://github.com/lDizil/memology-backend.git
+cd memology-backend
 ```
 
-### 2. Запуск приложения
+### 2. Настройка переменных окружения
+
+Скопируйте пример и настройте .env:
 
 ```bash
-# Скачать зависимости
-go mod tidy
+cp .env.example .env
+# Откройте .env и укажите свои параметры (DB, JWT, MinIO и др.)
+```
 
-# Запустить приложение
+### 3. Сборка и запуск контейнеров
+
+```bash
+docker-compose up --build
+# или
+make dev-up
+```
+
+Все сервисы (Go backend, PostgreSQL, MinIO) будут запущены автоматически.
+
+Для локальной разработки без Docker:
+
+```bash
+go mod tidy
 make run
 # или
 go run ./cmd/server
-```
-
-### 3. Полный запуск в Docker
-
-```bash
-make dev-up
-# или
-docker-compose up --build
 ```
 
 ## API Endpoints
@@ -42,20 +49,32 @@ docker-compose up --build
 - `POST /api/v1/auth/logout` - Выход
 - `POST /api/v1/auth/logout-all` - Выход со всех устройств
 
-### Пользователи (требует авторизации)
+### Пользователи
+
+#### требует авторизации
 
 - `GET /api/v1/users/profile` - Получить профиль
 - `PUT /api/v1/users/profile/update` - Обновить профиль
 - `POST /api/v1/users/change-password` - Сменить пароль
+- `DELETE /api/v1/users/account` - Удалить аккаунт пользователя
+
+#### не требует авторизации
+
 - `GET /api/v1/users/list` - Список пользователей
+- `GET /api/v1/users/profile/:id` - Получить профиль по ID
 
 ### Мемы
 
-- `GET /api/v1/memes` - Получить все мемы (публичный)
-- `GET /api/v1/memes/:id` - Получить мем по ID (публичный)
-- `POST /api/v1/memes/generate` - Сгенерировать мем (требует авторизации)
-- `GET /api/v1/memes/my` - Получить свои мемы (требует авторизации)
-- `DELETE /api/v1/memes/:id` - Удалить свой мем (требует авторизации)
+- `GET /api/v1/memes` - Получить все мемы
+- `GET /api/v1/memes/:id` - Получить мем по ID
+- `POST /api/v1/memes/generate` - Сгенерировать мем
+- `GET /api/v1/memes/my` - Получить свои мемы
+- `DELETE /api/v1/memes/:id` - Удалить свой мем
+- `GET /api/v1/memes/public` - Получить публичные мемы с пагинацией
+- `GET /api/v1/memes/styles` - Получить список доступных стилей генерации
+- `GET /api/v1/memes/:id/status` - Проверить статус генерации мемов (асинхронная обработка)
+- `GET /api/v1/memes/search/public` - Поиск по публичным мемам
+- `GET /api/v1/memes/search/private` - Поиск по личным мемам (требует авторизации)
 
 ## Документация
 
@@ -77,6 +96,30 @@ npx openapi-typescript http://localhost:8080/openapi.json --output ./types/api.t
 ```
 
 Документация автоматически генерируется из аннотаций в коде и содержит все доступные endpoints с примерами запросов.
+
+### Формат ответа с пагинацией
+
+Для всех роутов с пагинацией (мемы, пользователи) возвращается структура:
+
+```json
+{
+	"items": [...],
+	"total": 123,
+	"page": 1,
+	"limit": 20
+}
+```
+
+Пример для мемов:
+
+```json
+{
+	"items": [ { ...meme... }, ... ],
+	"total": 42,
+	"page": 1,
+	"limit": 20
+}
+```
 
 ## Переменные окружения
 
@@ -103,14 +146,21 @@ JWT_SECRET=your-very-secret-jwt-key-change-this-in-production
 JWT_ACCESS_TTL=1h
 JWT_REFRESH_TTL=168h
 
+
 MINIO_ROOT_USER=minioadmin
-MINIO_ROOT_PASSWORD=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin123
 MINIO_ENDPOINT=minio:9000
 MINIO_PUBLIC_URL=http://localhost:9000
 MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin123
 MINIO_USE_SSL=false
 MINIO_BUCKET=memes
+
+TASK_PROCESSOR_WORKERS=10
+TASK_PROCESSOR_QUEUE_SIZE=100
+TASK_PROCESSOR_POLL_INTERVAL=5s
+
+AI_BASE_URL=http://localhost:7080 (необходимо указать сервер, где запущена нейронная сеть, создающая мемы)
 ```
 
 ## Особенности
@@ -123,6 +173,13 @@ MINIO_BUCKET=memes
 - **MinIO**: S3-совместимое хранилище для изображений мемов
 - **Clean Architecture**: Разделение на слои handlers → services → repository
 
+- **Асинхронная генерация мемов**: После запроса `/memes/generate` возвращается объект с `status: pending` и `task_id`. Для проверки статуса можно использовать `/memes/{id}/status`. По умолчанию запускаются workers, которые начинают проверять статус каждые 5 секунд 120 раз (настраиваться с помощью .env). После завершения статус становится `completed`, появляется `image_url` (ниже -> Task Processor)
+- **MinIO**: Хранение изображений мемов и аватаров, публичные ссылки для фронтенда. Консоль: `http://localhost:9001` (логин/пароль: minioadmin).
+- **Task Processor**: Автоматическая обработка задач генерации мемов. Настройки воркера через `.env`:
+  - `TASK_PROCESSOR_WORKERS=10`
+  - `TASK_PROCESSOR_QUEUE_SIZE=100`
+  - `TASK_PROCESSOR_POLL_INTERVAL=5s`
+
 ## Генерация мемов
 
 ### Текущая реализация (для отладки)
@@ -131,22 +188,21 @@ MINIO_BUCKET=memes
 POST /api/v1/memes/generate
 Content-Type: multipart/form-data
 
-prompt: "ваш текст промпта"
-image: файл изображения (опционально)
+"is_public": true,
+"prompt": "я купил компьютер за 1000000",
+"style": "anime" (доступные стили можно изучить по эндпоинту GET /api/v1/memes/styles)
+
 ```
 
-- **С файлом**: мем создаётся сразу со статусом `completed`
-- **Без файла**: мем создаётся со статусом `pending` (для будущей нейронки)
+мем создаётся со статусом `pending`, если нейронная сеть начала его обработку, статус изменяется на `started`
 
-### Будущая интеграция с нейронкой
+### Асинхронная генерация
 
-Архитектура готова к интеграции:
-
-1. Мем создаётся со статусом `pending`
-2. Worker берёт задачу из очереди
-3. Отправляет `prompt` в нейросеть
-4. Получает изображение и загружает в MinIO
-5. Обновляет статус на `completed`
+1. Мем создаётся со статусом `pending` и возвращается `task_id`.
+2. Worker берёт задачу из очереди и отправляет `prompt` в нейросеть.
+3. Получает изображение и загружает в MinIO.
+4. Обновляет статус на `completed`, появляется `image_url`.
+5. Для проверки статуса используйте `/memes/{id}/status` или можно посмотреть значение поля в самому мем, получив его также через другой роутер.
 
 ### MinIO Console
 
@@ -162,9 +218,9 @@ image: файл изображения (опционально)
 make help        # Показать все команды
 make build       # Собрать приложение
 make run         # Запустить локально
-make dev-db      # Запустить только PostgreSQL
 make swagger     # Обновить документацию
 make clean       # Очистить всё
+# и другие
 ```
 
 ## Деплой на сервер
@@ -178,3 +234,18 @@ make clean       # Очистить всё
 1. Добавьте GitHub Secrets: `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY`
 2. Подготовьте сервер (Docker, Git)
 3. Push в `main` → автоматический деплой ✅
+
+## Архитектура
+
+- Проект построен по принципам Clean Architecture:
+
+  - handlers (Gin HTTP)
+  - services (бизнес-логика)
+  - repository (работа с БД)
+  - models (GORM-сущности)
+  - middleware (JWT, CORS)
+  - router (регистрация роутов)
+  - config (конфигурация)
+  - database (инициализация и миграции)
+
+- Вся логика разделена по слоям для удобства поддержки и масштабирования.
