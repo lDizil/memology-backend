@@ -286,7 +286,7 @@ const docTemplate = `{
         },
         "/memes/my": {
             "get": {
-                "description": "Get list of memes created by current user with pagination",
+                "description": "Get list of memes created by current user with pagination and optional search",
                 "produces": [
                     "application/json"
                 ],
@@ -308,6 +308,12 @@ const docTemplate = `{
                         "description": "Items per page",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by prompt",
+                        "name": "search",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -328,7 +334,7 @@ const docTemplate = `{
         },
         "/memes/public": {
             "get": {
-                "description": "Get paginated list of public memes",
+                "description": "Get paginated list of public memes with optional search",
                 "produces": [
                     "application/json"
                 ],
@@ -350,6 +356,12 @@ const docTemplate = `{
                         "description": "Items per page",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by prompt",
+                        "name": "search",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -357,113 +369,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.MemeHistoryResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/memes/search/private": {
-            "get": {
-                "description": "Search memes created by the authorized user by query string",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "memes"
-                ],
-                "summary": "Search private memes",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Meme"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/memes/search/public": {
-            "get": {
-                "description": "Search memes among public ones by query string",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "memes"
-                ],
-                "summary": "Search public memes",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Meme"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }

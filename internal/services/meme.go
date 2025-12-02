@@ -113,13 +113,13 @@ func (s *memeService) GetMeme(ctx context.Context, memeID uuid.UUID) (*models.Me
 	return meme, nil
 }
 
-func (s *memeService) GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, int64, error) {
-	memes, err := s.memeRepo.GetByUserID(ctx, userID, limit, offset)
+func (s *memeService) GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int, search string) ([]*models.Meme, int64, error) {
+	memes, err := s.memeRepo.GetByUserID(ctx, userID, limit, offset, search)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	total, err := s.memeRepo.CountByUserID(ctx, userID)
+	total, err := s.memeRepo.CountByUserID(ctx, userID, search)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -127,13 +127,13 @@ func (s *memeService) GetUserMemes(ctx context.Context, userID uuid.UUID, limit,
 	return memes, total, nil
 }
 
-func (s *memeService) GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, int64, error) {
-	memes, err := s.memeRepo.GetPublicMemes(ctx, limit, offset)
+func (s *memeService) GetPublicMemes(ctx context.Context, limit, offset int, search string) ([]*models.Meme, int64, error) {
+	memes, err := s.memeRepo.GetPublicMemes(ctx, limit, offset, search)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	total, err := s.memeRepo.CountPublicMemes(ctx)
+	total, err := s.memeRepo.CountPublicMemes(ctx, search)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -236,14 +236,6 @@ func (s *memeService) ProcessCompletedTask(ctx context.Context, memeID uuid.UUID
 	}
 
 	return nil
-}
-
-func (s *memeService) SearchPublicMemes(ctx context.Context, query string) ([]models.Meme, error) {
-	return s.memeRepo.SearchPublicMemes(ctx, query)
-}
-
-func (s *memeService) SearchPrivateMemes(ctx context.Context, userID uuid.UUID, query string) ([]models.Meme, error) {
-	return s.memeRepo.SearchPrivateMemes(ctx, userID, query)
 }
 
 func (s *memeService) GetAvailableStyles(ctx context.Context) ([]string, error) {

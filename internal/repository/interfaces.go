@@ -32,15 +32,13 @@ type SessionRepository interface {
 type MemeRepository interface {
 	Create(ctx context.Context, meme *models.Meme) error
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Meme, error)
-	GetByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, error)
-	GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID, limit, offset int, search string) ([]*models.Meme, error)
+	GetPublicMemes(ctx context.Context, limit, offset int, search string) ([]*models.Meme, error)
 	Update(ctx context.Context, meme *models.Meme) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, limit, offset int) ([]*models.Meme, error)
-	SearchPublicMemes(ctx context.Context, query string) ([]models.Meme, error)
-	SearchPrivateMemes(ctx context.Context, userID uuid.UUID, query string) ([]models.Meme, error)
-	CountByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
-	CountPublicMemes(ctx context.Context) (int64, error)
+	CountByUserID(ctx context.Context, userID uuid.UUID, search string) (int64, error)
+	CountPublicMemes(ctx context.Context, search string) (int64, error)
 	Count(ctx context.Context) (int64, error)
 	FindStuckMemes(ctx context.Context, olderThan time.Duration) ([]*models.Meme, error)
 }

@@ -33,15 +33,18 @@ func (r *memeRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Mem
 	return &meme, nil
 }
 
-func (r *memeRepository) GetByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Meme, error) {
+func (r *memeRepository) GetByUserID(ctx context.Context, userID uuid.UUID, limit, offset int, search string) ([]*models.Meme, error) {
 	var memes []*models.Meme
-	err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
 		Preload("Metrics").
-		Order("created_at DESC").
-		Limit(limit).
-		Offset(offset).
-		Find(&memes).Error
+		Order("created_at DESC")
+
+	if search != "" {
+		query = query.Where("prompt ILIKE ?", "%"+search+"%")
+	}
+
+	err := query.Limit(limit).Offset(offset).Find(&memes).Error
 	return memes, err
 }
 
@@ -53,16 +56,19 @@ func (r *memeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Delete(&models.Meme{}, "id = ?", id).Error
 }
 
-func (r *memeRepository) GetPublicMemes(ctx context.Context, limit, offset int) ([]*models.Meme, error) {
+func (r *memeRepository) GetPublicMemes(ctx context.Context, limit, offset int, search string) ([]*models.Meme, error) {
 	var memes []*models.Meme
-	err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Where("is_public = ?", true).
 		Preload("User").
 		Preload("Metrics").
-		Order("created_at DESC").
-		Limit(limit).
-		Offset(offset).
-		Find(&memes).Error
+		Order("created_at DESC")
+
+	if search != "" {
+		query = query.Where("prompt ILIKE ?", "%"+search+"%")
+	}
+
+	err := query.Limit(limit).Offset(offset).Find(&memes).Error
 	return memes, err
 }
 
@@ -78,43 +84,31 @@ func (r *memeRepository) List(ctx context.Context, limit, offset int) ([]*models
 	return memes, err
 }
 
-func (r *memeRepository) SearchPublicMemes(ctx context.Context, query string) ([]models.Meme, error) {
-	q := "%" + query + "%"
-	var memes []models.Meme
-	err := r.db.WithContext(ctx).Model(&models.Meme{}).
-		Where("is_public = TRUE AND prompt ILIKE ?", q).
-		Order("created_at DESC").
-		Find(&memes).Error
-
-	return memes, err
-}
-
-func (r *memeRepository) SearchPrivateMemes(ctx context.Context, userID uuid.UUID, query string) ([]models.Meme, error) {
-	q := "%" + query + "%"
-	var memes []models.Meme
-	err := r.db.WithContext(ctx).Model(&models.Meme{}).
-		Where("user_id = ? AND prompt ILIKE ?", userID, q).
-		Order("created_at DESC").
-		Find(&memes).Error
-
-	return memes, err
-}
-
-func (r *memeRepository) CountByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+func (r *memeRepository) CountByUserID(ctx context.Context, userID uuid.UUID, search string) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Model(&models.Meme{}).
-		Where("user_id = ?", userID).
-		Count(&count).Error
+		Where("user_id = ?", userID)
+
+	if search != "" {
+		query = query.Where("prompt ILIKE ?", "%"+search+"%")
+	}
+
+	err := query.Count(&count).Error
 	return count, err
 }
 
-func (r *memeRepository) CountPublicMemes(ctx context.Context) (int64, error) {
+func (r *memeRepository) CountPublicMemes(ctx context.Context, search string) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Model(&models.Meme{}).
-		Where("is_public = ?", true).
-		Count(&count).Error
+		Where("is_public = ?", true)
+
+	if search != "" {
+		query = query.Where("prompt ILIKE ?", "%"+search+"%")
+	}
+
+	err := query.Count(&count).Error
 	return count, err
 }
 

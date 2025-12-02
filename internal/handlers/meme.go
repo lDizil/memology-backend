@@ -102,11 +102,12 @@ func (h *MemeHandler) GetMeme(c *gin.Context) {
 }
 
 // @Summary Get user memes
-// @Description Get list of memes created by current user with pagination
+// @Description Get list of memes created by current user with pagination and optional search
 // @Tags memes
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(20)
+// @Param search query string false "Search by prompt"
 // @Success 200 {object} MemeHistoryResponse
 // @Failure 401 {object} ErrorResponse
 // @Router /memes/my [get]
@@ -131,9 +132,11 @@ func (h *MemeHandler) GetMyMemes(c *gin.Context) {
 		}
 	}
 
+	search := c.Query("search")
+
 	offset := (page - 1) * limit
 
-	memes, total, err := h.memeService.GetUserMemes(c.Request.Context(), userID.(uuid.UUID), limit, offset)
+	memes, total, err := h.memeService.GetUserMemes(c.Request.Context(), userID.(uuid.UUID), limit, offset, search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
@@ -148,11 +151,12 @@ func (h *MemeHandler) GetMyMemes(c *gin.Context) {
 }
 
 // @Summary Get public memes
-// @Description Get paginated list of public memes
+// @Description Get paginated list of public memes with optional search
 // @Tags memes
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(20)
+// @Param search query string false "Search by prompt"
 // @Success 200 {object} MemeHistoryResponse
 // @Router /memes/public [get]
 func (h *MemeHandler) GetPublicMemes(c *gin.Context) {
@@ -170,9 +174,11 @@ func (h *MemeHandler) GetPublicMemes(c *gin.Context) {
 		}
 	}
 
+	search := c.Query("search")
+
 	offset := (page - 1) * limit
 
-	memes, total, err := h.memeService.GetPublicMemes(c.Request.Context(), limit, offset)
+	memes, total, err := h.memeService.GetPublicMemes(c.Request.Context(), limit, offset, search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
@@ -308,64 +314,4 @@ func (h *MemeHandler) GetAvailableStyles(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, styles)
-}
-
-// @Summary Search public memes
-// @Description Search memes among public ones by query string
-// @Tags memes
-// @Accept json
-// @Produce json
-// @Param q query string true "Search query"
-// @Success 200 {array} models.Meme
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /memes/search/public [get]
-func (h *MemeHandler) SearchPublicMemes(c *gin.Context) {
-	query := c.Query("q")
-	if query == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "query param 'q' is required"})
-		return
-	}
-
-	memes, err := h.memeService.SearchPublicMemes(c.Request.Context(), query)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, memes)
-}
-
-// @Summary Search private memes
-// @Description Search memes created by the authorized user by query string
-// @Tags memes
-// @Accept json
-// @Produce json
-// @Param q query string true "Search query"
-// @Success 200 {array} models.Meme
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /memes/search/private [get]
-func (h *MemeHandler) SearchPrivateMemes(c *gin.Context) {
-	query := c.Query("q")
-	if query == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "query param 'q' is required"})
-		return
-	}
-
-	userID, _ := c.Get("user_id")
-	uid, ok := userID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
-	memes, err := h.memeService.SearchPrivateMemes(c.Request.Context(), uid, query)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, memes)
 }

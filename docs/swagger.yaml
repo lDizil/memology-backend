@@ -445,7 +445,8 @@ paths:
       - memes
   /memes/my:
     get:
-      description: Get list of memes created by current user with pagination
+      description: Get list of memes created by current user with pagination and optional
+        search
       parameters:
       - default: 1
         description: Page number
@@ -457,6 +458,10 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: Search by prompt
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -473,7 +478,7 @@ paths:
       - memes
   /memes/public:
     get:
-      description: Get paginated list of public memes
+      description: Get paginated list of public memes with optional search
       parameters:
       - default: 1
         description: Page number
@@ -485,6 +490,10 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: Search by prompt
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -493,77 +502,6 @@ paths:
           schema:
             $ref: '#/definitions/handlers.MemeHistoryResponse'
       summary: Get public memes
-      tags:
-      - memes
-  /memes/search/private:
-    get:
-      consumes:
-      - application/json
-      description: Search memes created by the authorized user by query string
-      parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.Meme'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Search private memes
-      tags:
-      - memes
-  /memes/search/public:
-    get:
-      consumes:
-      - application/json
-      description: Search memes among public ones by query string
-      parameters:
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.Meme'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Search public memes
       tags:
       - memes
   /memes/styles:
