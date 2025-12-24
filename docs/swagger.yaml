@@ -137,6 +137,23 @@ definitions:
     required:
     - prompt
     type: object
+  services.CreateTemplateMemeRequest:
+    properties:
+      context:
+        example: Кот пьет кофе
+        type: string
+      height:
+        example: 512
+        type: integer
+      is_public:
+        example: true
+        type: boolean
+      width:
+        example: 512
+        type: integer
+    required:
+    - context
+    type: object
   services.LoginRequest:
     properties:
       password:
@@ -441,6 +458,41 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
       summary: Generate new meme
+      tags:
+      - memes
+  /memes/generate-template:
+    post:
+      consumes:
+      - application/json
+      description: Generate meme using memegen.link API with random template selection
+        and LLM-powered captions. Returns URL to the generated meme immediately (synchronous).
+      parameters:
+      - description: Template meme generation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateTemplateMemeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Meme'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Generate template meme
       tags:
       - memes
   /memes/my:

@@ -284,6 +284,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/memes/generate-template": {
+            "post": {
+                "description": "Generate meme using memegen.link API with random template selection and LLM-powered captions. Returns URL to the generated meme immediately (synchronous).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memes"
+                ],
+                "summary": "Generate template meme",
+                "parameters": [
+                    {
+                        "description": "Template meme generation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateTemplateMemeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Meme"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/memes/my": {
             "get": {
                 "description": "Get list of memes created by current user with pagination and optional search",
@@ -1011,6 +1063,30 @@ const docTemplate = `{
                 "style": {
                     "type": "string",
                     "example": "anime"
+                }
+            }
+        },
+        "services.CreateTemplateMemeRequest": {
+            "type": "object",
+            "required": [
+                "context"
+            ],
+            "properties": {
+                "context": {
+                    "type": "string",
+                    "example": "Кот пьет кофе"
+                },
+                "height": {
+                    "type": "integer",
+                    "example": 512
+                },
+                "is_public": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "width": {
+                    "type": "integer",
+                    "example": 512
                 }
             }
         },

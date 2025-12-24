@@ -68,6 +68,44 @@ func (h *MemeHandler) GenerateMeme(c *gin.Context) {
 	c.JSON(http.StatusCreated, meme)
 }
 
+// @Summary Generate template meme
+// @Description Generate meme using memegen.link API with random template selection and LLM-powered captions. Returns URL to the generated meme immediately (synchronous).
+// @Tags memes
+// @Accept json
+// @Produce json
+// @Param request body services.CreateTemplateMemeRequest true "Template meme generation request"
+// @Success 201 {object} models.Meme
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /memes/generate-template [post]
+func (h *MemeHandler) GenerateTemplateMeme(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		return
+	}
+
+	var req services.CreateTemplateMemeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	if req.Context == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "context is required"})
+		return
+	}
+
+	meme, err := h.memeService.CreateTemplateMeme(c.Request.Context(), userID.(uuid.UUID), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, meme)
+}
+
 // @Summary Get meme by ID
 // @Description Get meme details by ID. Private memes can only be viewed by their owner.
 // @Tags memes

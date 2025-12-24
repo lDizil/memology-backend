@@ -10,6 +10,8 @@ services:
       - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - memology_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 10s
@@ -28,6 +30,8 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    networks:
+      - memology_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -51,18 +55,26 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ENDPOINT: minio:9000
       MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL}
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       MINIO_USE_SSL: "false"
       MINIO_BUCKET: ${MINIO_BUCKET}
+      AI_BASE_URL: ${AI_BASE_URL}
+      AI_TIMEOUT: ${AI_TIMEOUT:-120s}
     depends_on:
       postgres:
         condition: service_healthy
       minio:
         condition: service_healthy
+    networks:
+      - memology_network
     restart: unless-stopped
+
+networks:
+  memology_network:
+    driver: bridge
 
 volumes:
   postgres_data:

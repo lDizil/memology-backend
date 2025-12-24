@@ -85,6 +85,7 @@ func SetupRouter(authService services.AuthService, userService services.UserServ
 
 			memes.Use(middleware.JWTAuth(authService))
 			memes.POST("/generate", memeHandler.GenerateMeme)
+			memes.POST("/generate-template", memeHandler.GenerateTemplateMeme)
 			memes.GET("/my", memeHandler.GetMyMemes)
 			memes.DELETE("/:id", memeHandler.DeleteMeme)
 		}

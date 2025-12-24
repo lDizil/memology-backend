@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"mime/multipart"
+	"net/http"
 
 	"memology-backend/internal/models"
 	"memology-backend/internal/repository"
@@ -80,6 +82,97 @@ func (s *memeService) CreateMeme(ctx context.Context, userID uuid.UUID, req Crea
 	}
 
 	return meme, nil
+}
+
+// CreateTemplateMeme создает шаблонный мем через memegen.link API (синхронно)
+func (s *memeService) CreateTemplateMeme(ctx context.Context, userID uuid.UUID, req CreateTemplateMemeRequest) (*models.Meme, error) {
+	isPublic := true
+	if req.IsPublic != nil {
+		isPublic = *req.IsPublic
+	}
+
+	width := req.Width
+	if width == 0 {
+		width = 512
+	}
+	height := req.Height
+	if height == 0 {
+		height = 512
+	}
+
+	// Вызываем AI-сервис для генерации шаблонного мема
+	templateReq := GenerateTemplateRequest{
+		Context: req.Context,
+		Width:   width,
+		Height:  height,
+	}
+
+	templateResp, err := s.aiSvc.GenerateTemplateMeme(ctx, templateReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate template meme: %w", err)
+	}
+
+	// Скачиваем изображение с memegen.link
+	imageData, err := s.downloadImage(ctx, templateResp.URL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download image from memegen: %w", err)
+	}
+
+	// Загружаем в MinIO
+	objectName := fmt.Sprintf("memes/%s.png", uuid.New().String())
+	if err := s.minioSvc.UploadBytes(ctx, objectName, imageData); err != nil {
+		return nil, fmt.Errorf("failed to upload image to MinIO: %w", err)
+	}
+
+	// Получаем публичный URL нашего MinIO
+	imageURL := s.minioSvc.GetMemeURL(objectName)
+
+	// Создаем запись мема со статусом completed (синхронная генерация)
+	meme := &models.Meme{
+		UserID:      userID,
+		Prompt:      req.Context,
+		Style:       templateResp.Template,
+		ImageURL:    imageURL,
+		Status:      "completed",
+		IsPublic:    isPublic,
+		Width:       width,
+		Height:      height,
+		AspectRatio: fmt.Sprintf("%d:%d", width, height),
+	}
+
+	if err := s.memeRepo.Create(ctx, meme); err != nil {
+		// Удаляем файл из MinIO если не удалось создать запись
+		s.minioSvc.DeleteMeme(ctx, objectName)
+		return nil, fmt.Errorf("failed to create meme: %w", err)
+	}
+
+	return meme, nil
+}
+
+// downloadImage скачивает изображение по URL и возвращает байты
+func (s *memeService) downloadImage(ctx context.Context, imageURL string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", imageURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download image: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to download image: status %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image data: %w", err)
+	}
+
+	return data, nil
 }
 
 func (s *memeService) UploadMemeImage(ctx context.Context, memeID uuid.UUID, file *multipart.FileHeader) error {

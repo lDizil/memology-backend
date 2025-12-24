@@ -63,6 +63,7 @@ type ChangePasswordRequest struct {
 
 type MemeService interface {
 	CreateMeme(ctx context.Context, userID uuid.UUID, req CreateMemeRequest) (*models.Meme, error)
+	CreateTemplateMeme(ctx context.Context, userID uuid.UUID, req CreateTemplateMemeRequest) (*models.Meme, error)
 	UploadMemeImage(ctx context.Context, memeID uuid.UUID, file *multipart.FileHeader) error
 	GetMeme(ctx context.Context, memeID uuid.UUID) (*models.Meme, error)
 	GetUserMemes(ctx context.Context, userID uuid.UUID, limit, offset int, search string) ([]*models.Meme, int64, error)
@@ -77,5 +78,13 @@ type MemeService interface {
 type CreateMemeRequest struct {
 	Prompt   string `json:"prompt" validate:"required" example:"я купил компьютер за 1000000"`
 	Style    string `json:"style,omitempty" example:"anime"`
+	IsPublic *bool  `json:"is_public,omitempty" example:"true"`
+}
+
+// CreateTemplateMemeRequest - запрос на создание шаблонного мема через memegen.link
+type CreateTemplateMemeRequest struct {
+	Context  string `json:"context" validate:"required" example:"Кот пьет кофе"`
+	Width    int    `json:"width,omitempty" example:"512"`
+	Height   int    `json:"height,omitempty" example:"512"`
 	IsPublic *bool  `json:"is_public,omitempty" example:"true"`
 }

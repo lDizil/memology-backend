@@ -75,7 +75,8 @@ go run ./cmd/server
 
 #### требует авторизации
 
-- `POST /api/v1/memes/generate` - Сгенерировать мем (асинхронно)
+- `POST /api/v1/memes/generate` - Сгенерировать мем через нейросеть (асинхронно)
+- `POST /api/v1/memes/generate-template` - Сгенерировать мем по шаблону (синхронно, memegen.link)
 - `GET /api/v1/memes/my` - Свои мемы с пагинацией и поиском (`?page=1&limit=20&search=текст`)
 - `DELETE /api/v1/memes/:id` - Удалить свой мем
 
@@ -183,7 +184,11 @@ AI_TIMEOUT=120s
 
 ## Генерация мемов
 
-### Запрос на генерацию
+### Два способа генерации
+
+#### 1. Нейросеть (асинхронно)
+
+Генерация через AI-сервис с асинхронной обработкой:
 
 ```bash
 POST /api/v1/memes/generate
@@ -203,7 +208,40 @@ Authorization: Bearer <access_token>
 
 Мем создаётся со статусом `pending`. После начала обработки нейросетью статус меняется на `processing`.
 
-### Асинхронная генерация
+#### 2. Шаблон memegen.link (синхронно)
+
+Быстрая генерация мема по шаблону через memegen.link API:
+
+```bash
+POST /api/v1/memes/generate-template
+Content-Type: application/json
+Authorization: Bearer <access_token>
+
+{
+  "context": "когда пришёл на работу в понедельник",
+  "width": 600,
+  "height": 600
+}
+```
+
+- `context` — текст/контекст для генерации (обязательный)
+- `width` — ширина изображения (опционально, по умолчанию 600)
+- `height` — высота изображения (опционально, по умолчанию 600)
+
+**Ответ приходит сразу** с готовым URL мема:
+
+```json
+{
+  "id": "uuid",
+  "image_url": "https://api.memegen.link/images/template/text.png",
+  "prompt": "когда пришёл на работу в понедельник",
+  "status": "completed",
+  "is_public": false,
+  ...
+}
+```
+
+### Асинхронная генерация (нейросеть)
 
 1. Мем создаётся со статусом `pending`, возвращается объект с `id` и `task_id`
 2. Task Processor автоматически берёт задачу и опрашивает AI-сервис
